@@ -50,3 +50,22 @@ def get_most_frequent_value_index(y: np.ndarray, axis: int):
     Returns the most frequent value in numpy array row.
     """
     return np.argmax(np.apply_along_axis(np.bincount, 1, y), axis=axis)
+
+def binary_search_lambda(start ,end, equal_key=lambda x: x == 5, lower_key=lambda x: x > 5):
+    """
+    Searches a number between two boundaries based on a lambda expression.\n
+    For every given number x between [start] and [end] it must be evaluatable, if the searched number is lower, higher or equal to x.
+    """
+
+    if end >= start:
+        mid = (end + start) // 2
+
+        if equal_key(mid):
+            return mid
+        elif lower_key(mid):
+            return binary_search_lambda(start, mid - 1, equal_key, lower_key)
+        else:
+            return binary_search_lambda(mid + 1, end, equal_key, lower_key)
+    else:
+        # Element is not present in the array
+        return -1

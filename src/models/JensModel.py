@@ -26,6 +26,7 @@ import itertools
 
 from datetime import datetime
 import os
+from utils.array_operations import binary_search_lambda
 from utils.typing import assert_type
 from utils.Window import Window
 from utils.Recording import Recording
@@ -131,11 +132,10 @@ class JensModel(RainbowModel):
                 # find the switch point -> start + 1 will than be the new start point
                 # Refactoring idea (speed): Have switching point array to find point immediately
                 # https://stackoverflow.com/questions/19125661/find-index-where-elements-change-value-numpy/19125898#19125898
-                while last_start_stamp_not_reached(start):
-                    if activities[start] != activities[start + 1]:
-                        start += 1
-                        break
-                    start += 1
+                equal_key = lambda x: activities[x] != activities[x-1]
+                lower_key = lambda x: activities[x] != activities[start]
+                start = binary_search_lambda(start, end, equal_key=equal_key, lower_key=lower_key)
+
         return windows
     
     def _print_jens_windowize_monitoring(self, recordings: 'list[Recording]'):
