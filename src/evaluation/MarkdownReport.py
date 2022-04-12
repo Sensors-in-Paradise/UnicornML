@@ -130,7 +130,7 @@ class MarkdownReport:
             self._send_telegram_report(title, description, report_str)
 
     def _create_rainbow_report(self, title: str, description: str, report: str) -> None:
-        base_path = os.path.join(settings.ML_RAINBOW_PATH, "rainbow_test/report/")
+        base_path = os.path.join(settings.ML_RAINBOW_PATH, "rainbow_test","report") + os.path.sep
         path = os.path.join(base_path, title + ".md")
         if os.path.exists(path):
             num = 0

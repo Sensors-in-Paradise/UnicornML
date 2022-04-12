@@ -1,5 +1,3 @@
-import itertools
-import json
 import os
 
 
@@ -68,7 +66,7 @@ def init_sonar():
 
 def init_opportunity():
     global opportunity_dataset_path
-    opportunity_dataset_path = "opportunity-dataset"
+    opportunity_dataset_path = os.path.join("utils", "OpportunityUCIDataset")
 
     global activity_initial_num_to_activity_str
     activity_initial_num_to_activity_str = {
