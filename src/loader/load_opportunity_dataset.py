@@ -12,7 +12,7 @@ def load_opportunity_dataset(opportunity_dataset_path: str) -> "list[Recording]"
     """
     Returns a list of Recordings from the opportunity dataset
     """
-    opportunity_dataset_path += "/dataset"
+    opportunity_dataset_path += os.path.sep + "dataset"
     subject_ids = range(1, 5)
     recording_ids = range(1, 6)
 

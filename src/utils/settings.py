@@ -10,7 +10,7 @@ def init():
     """
 
     global opportunity_dataset_path
-    opportunity_dataset_path = "opportunity-dataset"
+    opportunity_dataset_path = os.path.join("utils", "OpportunityUCIDataset")
 
     global activity_initial_num_to_activity_str
     activity_initial_num_to_activity_str = {
@@ -33,5 +33,4 @@ def init():
     }
 
     global saved_experiments_path
-    saved_experiments_path = 'src/saved_experiments'
-
+    saved_experiments_path = "saved_experiments"
