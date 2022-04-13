@@ -4,20 +4,24 @@ import os
 import pandas as pd
 
 
-def save_all_recordings(recordings: 'list[Recording]', path: str):
+def save_all_recordings(recordings: 'list[Recording]', folder_path: str, file_name: str) -> None:
     """
     Save all recordings to a single csv file.
+
+    Refactoring idea:
+    - check if there is a file already and delete it?
     """
 
-    filename = 'all_recordings.csv'
+    path = os.path.join(folder_path, f"{file_name}.csv")
 
     complete_dataframe = pd.DataFrame()
 
-    if not os.path.exists(path):
-        os.makedirs(path)
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
 
+    print(f"Initializing a main dataframe")
     for (index, recording) in enumerate(recordings):
-        print(f'Saving recording {index}')
+        print(f'Adding recording {index} to the main dataframe')
         recording.activities.index = recording.sensor_frame.index
         
         recording_dataframe = recording.sensor_frame.copy()
@@ -27,8 +31,9 @@ def save_all_recordings(recordings: 'list[Recording]', path: str):
         recording_dataframe['rec_index'] = index
 
         complete_dataframe = complete_dataframe.append(recording_dataframe)
-
-    complete_dataframe.to_csv(os.path.join(path, filename), index=False)
+    
+    print(f"Saving the main dataframe to {path}, will take some time ...")
+    complete_dataframe.to_csv(path, index=False)
     print('Saved recordings to ' + path)
 
 
@@ -36,10 +41,13 @@ def load_all_recordings(path_to_load: str) -> 'list[Recording]':
     """
     Load all recordings from a single csv file.
     """
+    path_to_load = f"{path_to_load}.csv"
+
     if not os.path.exists(path_to_load):
         raise Exception(f"The dataset_path {path_to_load} does not exist.")
 
-    complete_dataframe = pd.read_csv(path_to_load)
+    print(f"Loading all recordings from {path_to_load}, will take some time ...")
+    complete_dataframe = pd.read_csv(path_to_load, engine='python')
     recordings = []
 
     unique_rec_index = complete_dataframe['rec_index'].unique()

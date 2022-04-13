@@ -15,6 +15,9 @@ class Recording:
         - a dataclass creates the intializer automatically
             - consider only giving the attributes as class vars -> dataclass handles this
         - add self.recorder
+
+    Refactoring idea:
+    - subject should be a int!, add it to assert_type
     """
 
     def __init__(
@@ -29,7 +32,6 @@ class Recording:
                 (sensor_frame, pd.DataFrame),
                 (time_frame, pd.Series),
                 (activities, pd.Series),
-                (subject, str),
             ]
         )
         assert sensor_frame.shape[0] == time_frame.shape[0], "sensor_frame and time_frame have to have the same length"

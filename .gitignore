@@ -1,6 +1,7 @@
 # data
 opportunity-dataset
 saved_experiments/
+data
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

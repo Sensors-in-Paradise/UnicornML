@@ -10,10 +10,7 @@ from utils import settings
 from utils.Recording import Recording
 from loader.XSensRecordingReader import XSensRecordingReader
 
-settings.init("sonar")
-
-
-def load_dataset(dataset_path: str, limit: int = None) -> "list[Recording]":
+def load_sonar_dataset(dataset_path: str, limit: int = None) -> "list[Recording]":
     """
     Returns a list of the raw recordings (activities, subjects included, None values) (different representaion of dataset)
     directory structure bias! not shuffled!
