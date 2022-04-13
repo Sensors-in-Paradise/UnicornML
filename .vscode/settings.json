@@ -1,7 +1,7 @@
 {
   "python.formatting.provider": "black",
   "editor.formatOnSave": true,
-  "python.linting.pylintEnabled": false,
+  "python.linting.pylintEnabled": true,
   "python.linting.enabled": true,
   "terminal.integrated.env.osx": {
     "PYTHONPATH": "${workspaceFolder}/src"
@@ -12,6 +12,5 @@
   "terminal.integrated.env.linux": {
     "PYTHONPATH": "${workspaceFolder}/src"
   },
-  "python.envFile": "/dhc/home/alexander.wischmann/conda3/envs/alex/bin/python3.9",
-  "python.pythonPath": "/dhc/home/alexander.wischmann/conda3/envs/alex/lib/python3.9",
+  "python.envFile": "${workspaceFolder}/.env"
 }
