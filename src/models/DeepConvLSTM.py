@@ -7,10 +7,8 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 import h5py
 from tensorflow.keras import regularizers
-from tensorflow import layers
 from tensorflow.keras.layers import (
     Input,
-    Sequential,
     Conv2D,
     Dense,
     Flatten,
@@ -18,13 +16,13 @@ from tensorflow.keras.layers import (
     Permute,
     Reshape,
 )
+from tensorflow.keras.models import Model
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
 import itertools
 
 from datetime import datetime
 import os
-from utils.array_operations import binary_search_lambda
 from utils.typing import assert_type
 from utils.Window import Window
 from utils.Recording import Recording
@@ -71,60 +69,67 @@ class DeepConvLSTMModel(RainbowModel):
         filter_size_cnn = 5
         n_units_lstm = 128
 
-        model = Sequential()
+        #model = Sequential()
         initializer = tf.keras.initializers.Orthogonal()
 
-        model_input = Input(shape=(self.window_size, n_features, 1))
+        i = Input(shape=(self.window_size, n_features, 1))
         # Adding 4 CNN layers.
-        model = Conv2D(
+        x = Conv2D(
             n_filters_cnn,
             kernel_size=(filter_size_cnn, 1),
             activation="relu",
             kernel_initializer=initializer,
-        )(model_input)
-        model = Conv2D(
+        )(i)
+        x = Conv2D(
             n_filters_cnn,
             kernel_size=(filter_size_cnn, 1),
             activation="relu",
             kernel_initializer=initializer,
-        )(model)
-        model = Conv2D(
+        )(x)
+        x = Conv2D(
             n_filters_cnn,
             kernel_size=(filter_size_cnn, 1),
             activation="relu",
             kernel_initializer=initializer,
-        )(model)
-        model = Conv2D(
+        )(x)
+        x = Conv2D(
             n_filters_cnn,
             kernel_size=(filter_size_cnn, 1),
             activation="relu",
             kernel_initializer=initializer,
-        )(model)
-        model = Permute((2, 1, 3))(model)
-        model = Reshape(
+        )(x)
+        x = Permute((2, 1, 3))(x)
+        x = Reshape(
             (
-                int(model.layers[4].output_shape[1]),
-                int(model.layers[4].output_shape[2])
-                * int(model.layers[4].output_shape[3]),
+                int(x.shape[1]),
+                int(x.shape[2])
+                * int(x.shape[3]),
             )
-        )(model)
+        )(x)
         # Adding 2 LSTM layers.
-        model = LSTM(
+        x = LSTM(
             n_units_lstm,
             dropout=0.5,
             return_sequences=True,
             kernel_initializer=initializer,
-        )(model)
-        model = LSTM(
+        )(x)
+        x = LSTM(
             n_units_lstm,
             dropout=0.5,
             return_sequences=True,
             kernel_initializer=initializer,
-        )(model)
+        )(x)
 
-        # model = Reshape( (-1, NUM_UNITS_LSTM))(model)
-        model = Flatten()(model)
-        model = Dense(n_outputs, activation="softmax")(model)
+        # x = Reshape( (-1, NUM_UNITS_LSTM))(x)
+        x = Flatten()(x)
+        x = Dense(n_outputs, activation="softmax")(x)
+
+        model = Model(i, x)
+        model.compile(
+            optimizer='RMSprop',
+            loss="CategoricalCrossentropy", # CategoricalCrossentropy (than we have to to the one hot encoding - to_categorical), before: "sparse_categorical_crossentropy"
+            metrics=["accuracy"],
+        )
 
         # model.summary()
         return model
@@ -165,12 +170,11 @@ class DeepConvLSTMModel(RainbowModel):
                 # find the switch point -> start + 1 will than be the new start point
                 # Refactoring idea (speed): Have switching point array to find point immediately
                 # https://stackoverflow.com/questions/19125661/find-index-where-elements-change-value-numpy/19125898#19125898
-                equal_key = lambda x: activities[x] != activities[x - 1]
-                lower_key = lambda x: activities[x] != activities[start]
-                start = binary_search_lambda(
-                    start, end, equal_key=equal_key, lower_key=lower_key
-                )
-
+                while last_start_stamp_not_reached(start):
+                    if activities[start] != activities[start + 1]:
+                        start += 1
+                        break
+                    start += 1
         return windows
 
     def _print_jens_windowize_monitoring(self, recordings: "list[Recording]"):

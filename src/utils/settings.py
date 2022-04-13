@@ -10,7 +10,7 @@ def init():
     """
 
     global opportunity_dataset_path
-    opportunity_dataset_path = "opportunity-dataset"
+    opportunity_dataset_path = "/dhc/groups/bp2021ba1/apps/UnicornML/src/OpportunityUCIDataset"
 
     global activity_initial_num_to_activity_str
     activity_initial_num_to_activity_str = {

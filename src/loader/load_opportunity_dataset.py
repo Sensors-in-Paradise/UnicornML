@@ -75,7 +75,7 @@ def load_opportunity_dataset(opportunity_dataset_path: str) -> "list[Recording]"
 
     # Get column names
     col_names = []
-    with open("src/loader/opportunity_col_names", "r") as file:
+    with open("loader/opportunity_col_names", "r") as file:
         lines = file.read().splitlines()
         for line in lines:
             col_names.append(line)
