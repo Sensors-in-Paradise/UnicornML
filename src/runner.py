@@ -19,4 +19,4 @@ from utils import settings
 
 
 if __name__ == "__main__":
-    import experiments.leave_subject_out
+    import experiments.opportunity_jens_cnn

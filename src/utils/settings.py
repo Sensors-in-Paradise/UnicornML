@@ -12,7 +12,7 @@ def init(dataset: str):
     """
 
     global saved_experiments_path
-    saved_experiments_path = "src/saved_experiments"
+    saved_experiments_path = "src" + os.path.sep + "saved_experiments"
 
     # Model / Dataset specific configuration
     if dataset == "opportunity":
@@ -68,7 +68,7 @@ def init_sonar():
 
 def init_opportunity():
     global opportunity_dataset_path
-    opportunity_dataset_path = "opportunity-dataset"
+    opportunity_dataset_path = os.path.join("src", "utils", "OpportunityUCIDataset")
 
     global activity_initial_num_to_activity_str
     activity_initial_num_to_activity_str = {
