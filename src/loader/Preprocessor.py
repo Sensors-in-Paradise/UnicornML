@@ -106,14 +106,14 @@ class Preprocessor:
         self, recordings: "list[Recording]"
     ) -> "list[Recording]":
         """
-        Normalizes the sensor values to be in range 0 to 1
+        Normalizes the sensor values to be in range -1 to 1
         """
         assert_type([(recordings[0], Recording)])
 
         # First fit the scaler on all data
         scaler = StandardScaler()
         for recording in recordings:
-            scaler.fit(recording.sensor_frame)
+            scaler.partial_fit(recording.sensor_frame)
 
         # Then apply normalization on each recording_frame
         for recording in recordings:
