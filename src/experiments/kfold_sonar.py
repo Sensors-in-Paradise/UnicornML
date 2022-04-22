@@ -1,5 +1,5 @@
 """
-this test makes a very solid test
+test with new config
 
 """
 
@@ -64,7 +64,7 @@ for idx, (train_index, test_index) in enumerate(k_fold.split(recordings)):
     recordings_subject_str.append(f"recordings_subjects: train: {to_recordings_subject_str(recordings_train)}, test: {to_recordings_subject_str(recordings_test)}")
 
     model = JensModel(
-        n_epochs=5,
+        n_epochs=2,
         window_size=100,
         n_features=n_features,
         n_outputs=n_outputs,

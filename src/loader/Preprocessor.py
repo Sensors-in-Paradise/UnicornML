@@ -43,7 +43,6 @@ class Preprocessor:
         1. _interpolate_ffill
         2. _normalize
         """
-        recordings = self._map_activities_to_id(recordings)
         recordings = self._interpolate_ffill(recordings)
         recordings = self._normalize_standardscaler(recordings)
         return recordings
@@ -87,21 +86,6 @@ class Preprocessor:
 
         return recordings
 
-    def _map_activities_to_id(self, recordings: "list[Recording]") -> "list[Recording]":
-        def map_recording_activities_to_id(recording):
-            """
-            Converts the string labels of one recording to integers"
-            """
-            recording.activities = pd.Series(
-                [
-                    settings.ACTIVITIES.get(activity) or settings.ACTIVITIES["invalid"]
-                    for activity in recording.activities
-                ]
-            )
-            return recording
-
-        # Convert the string labels of all recordings to integers
-        return [map_recording_activities_to_id(recording) for recording in recordings]
 
     def _interpolate_ffill(self, recordings: "list[Recording]") -> "list[Recording]":
         """

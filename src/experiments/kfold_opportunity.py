@@ -1,5 +1,5 @@
 """
-this test makes a very solid test
+test with new config
 
 """
 

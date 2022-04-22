@@ -20,5 +20,5 @@ from utils import settings
 
 
 if __name__ == "__main__":
-    import experiments.kfold_opportunity
+    import experiments.sonar_base
     
