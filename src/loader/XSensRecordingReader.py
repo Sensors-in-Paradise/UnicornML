@@ -11,6 +11,7 @@ if verbose:
     def d_print(*args):
         print(*args)
 
+
 else:
 
     def d_print(*args):
@@ -52,7 +53,7 @@ class XSensRecordingReader(object):
             # Complete path for reading & read it
             sensor_file_path = os.path.join(recording_folder_path, sensor_file_name)
             sensor_frame = pd.read_csv(
-                sensor_file_path, skiprows=settings.CSV_HEADER_SIZE
+                sensor_file_path, skiprows=settings.DATA_CONFIG.csv_header_size
             )
 
             # Add new frame to recording_frame

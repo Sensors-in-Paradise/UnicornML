@@ -3,6 +3,7 @@ from loader.load_opportunity_dataset import load_opportunity_dataset
 from loader.load_sonar_dataset import load_sonar_dataset
 import itertools
 import json
+import os
 
 import pandas as pd
 from dataclasses import dataclass
@@ -11,51 +12,55 @@ from dataclasses import dataclass
 @dataclass
 class DataConfig:
     """
-    DataConfig Interface:
+    Config Interface:
     (can be used generic)
-        data_config.activity_idx_to_name(activity_idx) (subclasses need to define the mapping that is required for that)
+        data_config.activity_idx_to_activity_name(activity_idx) (subclasses need to define the mapping that is required for that)
         data_config.load_dataset()
     """
 
+    # Dataset Config (subclass responsibility) -----------
+
+    raw_label_to_activity_idx_map = None
+    activity_idx_to_activity_name_map = None
+
+
     # interface (subclass responsibility to define) ------------------------------------------------------------
 
-    """
-        Refactoring idea:
-        find a better solution:
-        - __init__ in DataConfig is never called! 
-        - self.activity_idx_to_name_map defined for the typing
-    """
-    def __init__(self):
-        self.activity_idx_to_name_map = None
-
-    def load_dataset(self) -> 'list[Recording]':
-        raise NotImplementedError("init subclass of DataConfig that defines the method activity_idx_to_name")
+    def load_dataset(self) -> "list[Recording]":
+        raise NotImplementedError(
+            "init subclass of Config that defines the method activity_idx_to_activity_name"
+        )
 
     # generic
-    def activity_idx_to_name(self, activity_idx: int) -> str:
-        assert self.activity_idx_to_name_map is not None, "init subclass of DataConfig that defines the var activity_idx_to_name_map"
+    def raw_label_to_activity_idx(self, label: str) -> int:
+        """
+        from the label as it is saved in the dataset, to the activity index
+        (Relabeling)
+        """
+        assert (
+            self.raw_label_to_activity_idx_map is not None
+        ), "init subclass of Config that defines the var raw_label_to_activity_idx_map"
+        return self.raw_label_to_activity_idx_map[label]
+
+    def activity_idx_to_activity_name(self, activity_idx: int) -> str:
+        assert (
+            self.activity_idx_to_activity_name_map is not None
+        ), "init subclass of Config that defines the var activity_idx_to_activity_name_map"
         assert_type((activity_idx, int))
-        return self.activity_idx_to_name_map[activity_idx]
-    
+        return self.activity_idx_to_activity_name_map[activity_idx]
+
     def n_activities(self) -> int:
-        assert self.activity_idx_to_name_map is not None, "init subclass of DataConfig that defines the var activity_idx_to_name_map"
-        return len(self.activity_idx_to_name_map)
+        assert (
+            self.activity_idx_to_activity_name_map is not None
+        ), "init subclass of Config that defines the var activity_idx_to_activity_name_map"
+        return len(self.activity_idx_to_activity_name_map)
 
-class OpportunityDataConfig(DataConfig):
 
+class OpportunityConfig(DataConfig):
     def __init__(self, dataset_path: str):
         self.dataset_path = dataset_path
-        self.activity_idx_to_name_map = {
-            0: "null",
-            1: "relaxing",
-            2: "coffee time",
-            3: "early morning",
-            4: "cleanup",
-            5: "sandwich time",
-        }
 
-        # Custom vars
-        self.initial_higher_level_label_to_activity_idx = {
+        self.raw_label_to_activity_idx_map = {
             0: 0,
             101: 1,
             102: 2,
@@ -64,33 +69,140 @@ class OpportunityDataConfig(DataConfig):
             105: 5,
         }
 
+        self.activity_idx_to_activity_name_map = {
+            0: "null",
+            1: "relaxing",
+            2: "coffee time",
+            3: "early morning",
+            4: "cleanup",
+            5: "sandwich time",
+        }
 
-    def load_dataset(self) -> 'list[Recording]':
+    def load_dataset(self) -> "list[Recording]":
         return load_opportunity_dataset(self.dataset_path)
 
-class SonarDataConfig(DataConfig):        
 
+class SonarConfig(DataConfig):
     def __init__(self, dataset_path: str):
         self.dataset_path = dataset_path
 
-        labels = None
-        with open("labels.json") as file:
-            categories = json.load(file)["items"]
-            labels = list(
-                itertools.chain.from_iterable(
-                    category["entries"] for category in categories
-                )
+        labels = list(
+            itertools.chain.from_iterable(
+                category["entries"] for category in self.category_labels
             )
+        )
+        self.raw_label_to_activity_idx_map = {label: i for i, label in enumerate(labels)} # no relabeling applied
         activities = {k: v for v, k in enumerate(labels)}
-        self.activity_idx_to_name_map =  {v: k for k, v in activities.items()}
+        self.activity_idx_to_activity_name_map = {v: k for k, v in activities.items()}
 
-        # SHOULD NOT BE NEEDED!!!! --------------------------------------------------
+        # SONAR SPECIFIC VARS --------------------------------------------------
 
-        # global SENSOR_SUFFIX_ORDER
-        # SENSOR_SUFFIX_ORDER = ["LF", "LW", "ST", "RW", "RF"]
+        self.sensor_suffix_order = ["LF", "LW", "ST", "RW", "RF"]
+        self.csv_header_size = 8
 
-        # global CSV_HEADER_SIZE
-        # CSV_HEADER_SIZE = 8
+    def load_dataset(self, **args) -> "list[Recording]":
+        return load_sonar_dataset(self.dataset_path, **args)
 
-    def load_dataset(self) -> 'list[Recording]':
-        return load_sonar_dataset(self.dataset_path)
+    people = [
+        "unknown",
+        "christine",
+        "aileen",
+        "connie",
+        "yvan",
+        "brueggemann",
+        "jenny",
+        "mathias",
+        "kathi",
+        "anja",
+    ]
+    category_labels = [
+        {
+            "category": "Others",
+            "entries": [
+                "invalid",
+                "null - activity",
+                "aufräumen",
+                "aufwischen (staub)",
+                "blumen gießen",
+                "corona test",
+                "kaffee kochen",
+                "schrank aufräumen",
+                "wagen schieben",
+                "wäsche umräumen",
+                "wäsche zusammenlegen",
+            ],
+        },
+        {
+            "category": "Morgenpflege",
+            "entries": [
+                "accessoires (parfüm) anlegen",
+                "bad vorbereiten",
+                "bett machen",
+                "bett beziehen",
+                "haare kämmen",
+                "hautpflege",
+                "ikp-versorgung",
+                "kateterleerung",
+                "kateterwechsel",
+                "medikamente geben",
+                "mundpflege",
+                "nägel schneiden",
+                "rasieren",
+                "umkleiden",
+                "verband anlegen",
+            ],
+        },
+        {
+            "category": "Waschen",
+            "entries": [
+                "duschen",
+                "föhnen",
+                "gegenstand waschen",
+                "gesamtwaschen im bett",
+                "haare waschen",
+                "rücken waschen",
+                "waschen am waschbecken",
+                "wasser holen",
+            ],
+        },
+        {
+            "category": "Mahlzeiten",
+            "entries": [
+                "essen auf teller geben",
+                "essen austragen",
+                "essen reichen",
+                "geschirr austeilen",
+                "geschirr einsammeln",
+                "getränke ausschenken",
+                "getränk geben",
+                "küche aufräumen",
+                "küchenvorbereitungen",
+                "tablett tragen",
+            ],
+        },
+        {
+            "category": "Assistieren",
+            "entries": [
+                "arm halten",
+                "assistieren - aufstehen",
+                "assistieren - hinsetzen",
+                "assistieren - laufen",
+                "insulingabe",
+                "patient umlagern (lagerung)",
+                "pflastern",
+                "rollstuhl modifizieren",
+                "rollstuhl schieben",
+                "rollstuhl transfer",
+                "toilettengang",
+            ],
+        },
+        {
+            "category": "Organisation",
+            "entries": [
+                "arbeiten am computer",
+                "dokumentation",
+                "medikamente stellen",
+                "telefonieren",
+            ],
+        },
+    ]

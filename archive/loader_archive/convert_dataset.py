@@ -17,7 +17,7 @@ def convert_quaternion_to_matrix(recordings: List[Recording]) -> List[Recording]
             print(f"Converting quaternion to matrix for recording {idx}")
 
         # Iterate over all sensors - we need to convert this many quaternions
-        for sensor_suffix in settings.SENSOR_SUFFIX_ORDER:
+        for sensor_suffix in settings.DATA_CONFIG.sensor_suffix_order:
             # Build the column names, that we need to select for the quaternion
             quaternion_cols = [
                 f"Quat_{axis}_{sensor_suffix}" for axis in ["W", "X", "Y", "Z"]
@@ -64,7 +64,7 @@ def convert_quaternion_to_euler(recordings: List[Recording]) -> List[Recording]:
             )
 
         # Iterate over all sensors - we need to convert this many quaternions
-        for sensor_suffix in settings.SENSOR_SUFFIX_ORDER:
+        for sensor_suffix in settings.DATA_CONFIG.sensor_suffix_order:
             # Build the column names, that we need to select for the quaternion
             quaternion_cols = [
                 f"Quat_{axis}_{sensor_suffix}" for axis in ["W", "X", "Y", "Z"]
@@ -98,7 +98,7 @@ def convert_quaternion_to_vector(recordings: List[Recording]) -> List[Recording]
             print(f"Converting quaternion to euler angles for recording {idx}")
 
         # Iterate over all sensors - we need to convert this many quaternions
-        for sensor_suffix in settings.SENSOR_SUFFIX_ORDER:
+        for sensor_suffix in settings.DATA_CONFIG.sensor_suffix_order:
             # Build the column names, that we need to select for the quaternion
             quaternion_cols = [
                 f"Quat_{axis}_{sensor_suffix}" for axis in ["W", "X", "Y", "Z"]
@@ -131,7 +131,7 @@ def convert_euler_to_vector(recordings: List[Recording]) -> List[Recording]:
             print(f"Converting euler to vectors for recording {idx}")
 
         # Iterate over all sensors - we need to convert this many quaternions
-        for sensor_suffix in settings.SENSOR_SUFFIX_ORDER:
+        for sensor_suffix in settings.DATA_CONFIG.sensor_suffix_order:
             # Build the column names, that we need to select for the quaternion
             euler_cols = [f"Quat_{axis}_{sensor_suffix}" for axis in ["W", "X", "Y"]]
 
@@ -161,7 +161,7 @@ def convert_euler_to_velocity(recordings: List[Recording]) -> List[Recording]:
             print(f"Converting to velocity for recording {idx}", end="\r")
 
         # Iterate over all sensors - we need to convert this many quaternions
-        for sensor_suffix in settings.SENSOR_SUFFIX_ORDER:
+        for sensor_suffix in settings.DATA_CONFIG.sensor_suffix_order:
             # Build the column names, that we need to select for the quaternion
             columns = [f"Quat_{axis}_{sensor_suffix}" for axis in ["W", "X", "Y"]]
 
@@ -192,7 +192,7 @@ def convert_quat_to_velocity(recordings: List[Recording]) -> List[Recording]:
             print(f"Converting to velocity for recording {idx}", end="\r")
 
         # Iterate over all sensors - we need to convert this many quaternions
-        for sensor_suffix in settings.SENSOR_SUFFIX_ORDER:
+        for sensor_suffix in settings.DATA_CONFIG.sensor_suffix_order:
             # Build the column names, that we need to select for the quaternion
             columns = [f"Quat_{axis}_{sensor_suffix}" for axis in ["W", "X", "Y", "Z"]]
 

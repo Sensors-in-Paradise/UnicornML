@@ -11,7 +11,7 @@ def filter_acceleration(recordings: "list[Recording]") -> "list[Recording]":
 
     acceleration_column_names = [
         f"FreeAcc_{axis}_{sensor_suffix}"
-        for sensor_suffix in settings.SENSOR_SUFFIX_ORDER
+        for sensor_suffix in settings.DATA_CONFIG.sensor_suffix_order
         for axis in ["X", "Y", "Z"]
     ]
 

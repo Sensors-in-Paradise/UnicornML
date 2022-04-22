@@ -20,5 +20,5 @@ from utils import settings
 
 
 if __name__ == "__main__":
-    import experiments.template_opportunity_exp
+    import experiments.kfold_opportunity
     

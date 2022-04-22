@@ -16,13 +16,13 @@ from loader.Preprocessor import Preprocessor
 from models.JensModel import JensModel
 from utils.filter_activities import filter_activities
 from utils.folder_operations import new_saved_experiment_folder
-from utils.DataConfig import OpportunityDataConfig
+from utils.DataConfig import OpportunityConfig
 from utils.save_all_recordings import save_all_recordings, load_all_recordings
 
 
 
 # Init
-data_config = OpportunityDataConfig(dataset_path='data/opportunity-dataset')
+data_config = OpportunityConfig(dataset_path='data/opportunity-dataset')
 settings.init(data_config)
 random.seed(1678978086101)
 

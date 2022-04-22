@@ -2,6 +2,7 @@
 opportunity-dataset
 saved_experiments/
 data
+credentials.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

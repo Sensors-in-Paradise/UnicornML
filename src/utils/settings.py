@@ -3,7 +3,7 @@ import json
 import os
 
 
-def init(data_config):
+def init(data_config=None):
     """
     Note:
     - no typing of data_config possible (circular import)
