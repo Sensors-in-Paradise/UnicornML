@@ -1,3 +1,4 @@
+from scipy import signal
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 import pandas as pd
 
@@ -32,6 +33,7 @@ class Preprocessor:
         """
         recordings = self._map_activities_to_id(recordings)
         recordings = self._interpolate_ffill(recordings)
+        recordings = self._butter_bandpass_filter(recordings)
         recordings = self._normalize_standardscaler(recordings)
         return recordings
 
@@ -102,9 +104,7 @@ class Preprocessor:
 
         return recordings
 
-    def _normalize_standardscaler(
-        self, recordings: "list[Recording]"
-    ) -> "list[Recording]":
+    def _normalize_standardscaler(self, recordings: "list[Recording]") -> "list[Recording]":
         """
         Normalizes the sensor values to be in range -1 to 1
         """
@@ -121,4 +121,13 @@ class Preprocessor:
             recording.sensor_frame = pd.DataFrame(
                 transformed_array, columns=recording.sensor_frame.columns
             )
+        return recordings
+
+    def _butter_bandpass_filter(self, recordings: "list[Recording]") -> "list[Recording]":
+        order = 3
+        sampling_freq = 50
+        for recording in recordings:
+            sos = signal.butter(order, sampling_freq, 'bandpass', analog=True)
+            filtered = signal.sosfilt(sos, recording.sensor_frame)
+            recording.sensor_frame = filtered
         return recordings

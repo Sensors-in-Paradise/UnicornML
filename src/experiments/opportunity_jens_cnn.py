@@ -41,7 +41,7 @@ from evaluation.text_metrics import create_text_metrics
 from evaluation.metrics import accuracy, f1_score
 
 
-settings.init()
+settings.init("opportunity")
 
 # Load data
 recordings = load_opportunity_dataset(settings.opportunity_dataset_path) # Refactoring idea: load_dataset(x_sens_reader_func, path_to_dataset)
