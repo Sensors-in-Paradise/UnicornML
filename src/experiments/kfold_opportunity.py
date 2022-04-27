@@ -69,7 +69,7 @@ for idx, (train_index, test_index) in enumerate(k_fold.split(recordings)):
 
     model = JensModel(
         n_epochs=5,
-        window_size=100,
+        window_size=window_size,
         n_features=n_features,
         n_outputs=n_outputs,
         batch_size=64,
