@@ -99,7 +99,7 @@ class Preprocessor:
 
         return recordings
     
-    def _normalize(self, recordings: list[Recording], scaler_fn=StandardScaler):
+    def _normalize(self, recordings: list[Recording], scaler_fn):
         """
         Normalizes the sensor values with the given scaler
         """
@@ -120,12 +120,12 @@ class Preprocessor:
 
 
     def _normalize_minmaxscaler(self, recordings: "list[Recording]") -> "list[Recording]":
-        return self._normalize(recordings, scaler=MinMaxScaler)
+        return self._normalize(recordings, scaler_fn=MinMaxScaler)
 
     def _normalize_standardscaler(self, recordings: "list[Recording]") -> "list[Recording]":
         """
             Normalizes the sensor values to be in range 0 to 1
         """
-        return self._normalize(recordings)
+        return self._normalize(recordings, scaler_fn=StandardScaler)
 
 
