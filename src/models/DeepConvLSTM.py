@@ -69,7 +69,7 @@ class DeepConvLSTMModel(RainbowModel):
         filter_size_cnn = 5
         n_units_lstm = 128
 
-        #model = Sequential()
+        # model = Sequential()
         initializer = tf.keras.initializers.Orthogonal()
 
         i = Input(shape=(self.window_size, n_features, 1))
@@ -102,8 +102,7 @@ class DeepConvLSTMModel(RainbowModel):
         x = Reshape(
             (
                 int(x.shape[1]),
-                int(x.shape[2])
-                * int(x.shape[3]),
+                int(x.shape[2]) * int(x.shape[3]),
             )
         )(x)
         # Adding 2 LSTM layers.
@@ -126,12 +125,12 @@ class DeepConvLSTMModel(RainbowModel):
 
         model = Model(i, x)
         model.compile(
-            optimizer='RMSprop',
-            loss="CategoricalCrossentropy", # CategoricalCrossentropy (than we have to to the one hot encoding - to_categorical), before: "sparse_categorical_crossentropy"
+            optimizer="RMSprop",
+            loss="CategoricalCrossentropy",  # CategoricalCrossentropy (than we have to to the one hot encoding - to_categorical), before: "sparse_categorical_crossentropy"
             metrics=["accuracy"],
         )
 
-        # model.summary()
+        model.summary()
         return model
 
     def _windowize_recording(self, recording: "Recording") -> "list[Window]":
