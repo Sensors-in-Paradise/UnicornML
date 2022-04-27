@@ -46,5 +46,5 @@ def init():
         "D4:22:CD:00:06:72": "RF",
     }
 
-    global CSV_HEADER_SIZE
-    CSV_HEADER_SIZE = 8
+    global csv_header_size
+    csv_header_size = 8

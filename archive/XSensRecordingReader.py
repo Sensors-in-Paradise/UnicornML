@@ -39,7 +39,7 @@ class XSensRecordingReader(object):
             # Complete path for reading & read it
             sensor_file_path = os.path.join(recording_folder_path, sensor_file_name)
             sensor_frame = pd.read_csv(
-                sensor_file_path, skiprows=settings.CSV_HEADER_SIZE
+                sensor_file_path, skiprows=settings.DATA_CONFIG.csv_header_size
             )
             # print(f"Adding file {sensor_file_name} with id {sensor_id} and shape {sensor_frame.shape}")
 

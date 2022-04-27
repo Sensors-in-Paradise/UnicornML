@@ -53,6 +53,10 @@ class JensModel(RainbowModel):
 
         # create model
         self.model = self._create_model(kwargs["n_features"], kwargs["n_outputs"])
+        # Refactoring idea:
+        # n_features of a neuronal net is the number of inputs, so in reality n_features = window_size * n_features
+        # we could have another name for that
+        
         print(
             f"Building model for {self.window_size} timesteps (window_size) and {kwargs['n_features']} features"
         )

@@ -5,13 +5,17 @@ import itertools
 import os
 
 
-def create_conf_matrix(path: str, y_test_pred: np.ndarray, y_test_true: np.ndarray) -> None:
+def create_conf_matrix(path: str, y_test_pred: np.ndarray, y_test_true: np.ndarray, file_name: str = "conf_matrix") -> None:
     """
     creates and saves conf matrix as .png to path 
 
     TODO: this function shows a window on your desktop, not needed its saved in the folder, deactivate that
     (PS: its not imshow, haha)
     """
+    # reset stupid singleton
+    plt.cla()
+    plt.clf()
+
     # Convertion
     classes = list(range(len(y_test_true[0]))) # [0, 1, 0, 0, 0] to [0, 1, 2, 3, 4]
     y_test_true = np.argmax(y_test_true, axis=1)
@@ -52,4 +56,4 @@ def create_conf_matrix(path: str, y_test_pred: np.ndarray, y_test_true: np.ndarr
         f3.show()
 
     # Save
-    plt.savefig(os.path.join(path, "conf_matrix.png"))
+    plt.savefig(os.path.join(path, f"{file_name}.png"))

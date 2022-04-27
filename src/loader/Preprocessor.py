@@ -17,27 +17,39 @@ class Preprocessor:
 
     def jens_preprocess(self, recordings: "list[Recording]") -> "list[Recording]":
         """
-        1. _normal_interpolate
+        1. _linear_interpolate
         """
         assert_type([(recordings[0], Recording)])
 
         # not needed? dataCollection = dataCollection.apply(pd.to_numeric, errors="coerce")  # data like 'k' (strings) will be converted to NaN
-        recordings = self._normal_interpolate(recordings)
+        recordings = self._linear_interpolate(recordings)
         return recordings
+    
+    def jens_preprocess_with_normalize(self, recordings: "list[Recording]") -> "list[Recording]":
+        """
+        1. _linear_interpolate
+        2. _normalize_minmaxscaler
+        """
+        assert_type([(recordings[0], Recording)])
+
+        # not needed? dataCollection = dataCollection.apply(pd.to_numeric, errors="coerce")  # data like 'k' (strings) will be converted to NaN
+        recordings = self._linear_interpolate(recordings)
+        recordings = self._normalize_minmaxscaler(recordings)
+        return recordings
+
 
     def our_preprocess(self, recordings: "list[Recording]") -> "list[Recording]":
         """
         1. _interpolate_ffill
         2. _normalize
         """
-        recordings = self._map_activities_to_id(recordings)
         recordings = self._interpolate_ffill(recordings)
         recordings = self._normalize_standardscaler(recordings)
         return recordings
 
     # Preprocess-Library ------------------------------------------------------------
 
-    def _normal_interpolate(self, recordings: "list[Recording]") -> "list[Recording]":
+    def _linear_interpolate(self, recordings: "list[Recording]") -> "list[Recording]":
         """
         df.interpolate() -> standard linear interpolation
 
@@ -74,21 +86,6 @@ class Preprocessor:
 
         return recordings
 
-    def _map_activities_to_id(self, recordings: "list[Recording]") -> "list[Recording]":
-        def map_recording_activities_to_id(recording):
-            """
-            Converts the string labels of one recording to integers"
-            """
-            recording.activities = pd.Series(
-                [
-                    settings.ACTIVITIES.get(activity) or settings.ACTIVITIES["invalid"]
-                    for activity in recording.activities
-                ]
-            )
-            return recording
-
-        # Convert the string labels of all recordings to integers
-        return [map_recording_activities_to_id(recording) for recording in recordings]
 
     def _interpolate_ffill(self, recordings: "list[Recording]") -> "list[Recording]":
         """
@@ -101,17 +98,15 @@ class Preprocessor:
             recording.sensor_frame = recording.sensor_frame.fillna(method=fill_method)
 
         return recordings
-
-    def _normalize_standardscaler(
-        self, recordings: "list[Recording]"
-    ) -> "list[Recording]":
+    
+    def _normalize(self, recordings: list[Recording], scaler_fn):
         """
-        Normalizes the sensor values to be in range -1 to 1
+        Normalizes the sensor values with the given scaler
         """
         assert_type([(recordings[0], Recording)])
 
         # First fit the scaler on all data
-        scaler = StandardScaler()
+        scaler = scaler_fn()
         for recording in recordings:
             scaler.partial_fit(recording.sensor_frame)
 
@@ -122,3 +117,15 @@ class Preprocessor:
                 transformed_array, columns=recording.sensor_frame.columns
             )
         return recordings
+
+
+    def _normalize_minmaxscaler(self, recordings: "list[Recording]") -> "list[Recording]":
+        return self._normalize(recordings, scaler_fn=MinMaxScaler)
+
+    def _normalize_standardscaler(self, recordings: "list[Recording]") -> "list[Recording]":
+        """
+            Normalizes the sensor values to be in range 0 to 1
+        """
+        return self._normalize(recordings, scaler_fn=StandardScaler)
+
+
