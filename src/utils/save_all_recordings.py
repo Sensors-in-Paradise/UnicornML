@@ -8,8 +8,8 @@ def save_all_recordings(recordings: 'list[Recording]', folder_path: str, file_na
     """
     Save all recordings to a single csv file.
 
-    Refactoring idea:
-    - check if there is a file already and delete it?
+    - will overwrite if there is a file present
+    - idea: different name if a file with this name is present
     """
 
     path = os.path.join(folder_path, f"{file_name}.csv")
