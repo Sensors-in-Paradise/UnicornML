@@ -108,7 +108,7 @@ class Preprocessor:
         # First fit the scaler on all data
         scaler = scaler_fn()
         for recording in recordings:
-            scaler.fit(recording.sensor_frame)
+            scaler.partial_fit(recording.sensor_frame)
 
         # Then apply normalization on each recording_frame
         for recording in recordings:
