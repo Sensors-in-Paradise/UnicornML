@@ -1,6 +1,10 @@
 """
-test with new config
+template experiment with new config
 
+K-Fold (Leave recording out) evaluation of JensModel saving accuracy, confusion matrix and subject information to an experiment folder
+This uses the new DataConfig.
+Expected accuracy: ~xx%
+Takes around 6 minutes on DHC lab
 """
 
 import os

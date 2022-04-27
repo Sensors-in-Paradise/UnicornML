@@ -39,20 +39,20 @@ class DataConfig:
         """
         assert (
             self.raw_label_to_activity_idx_map is not None
-        ), "init subclass of Config that defines the var raw_label_to_activity_idx_map"
+        ), "A subclass of Config which initializes the var raw_label_to_activity_idx_map should be used to access activity mapping."
         return self.raw_label_to_activity_idx_map[label]
 
     def activity_idx_to_activity_name(self, activity_idx: int) -> str:
         assert (
             self.activity_idx_to_activity_name_map is not None
-        ), "init subclass of Config that defines the var activity_idx_to_activity_name_map"
+        ), "A subclass of Config which initializes the var activity_idx_to_activity_name_map should be used to access activity mapping."
         assert_type((activity_idx, int))
         return self.activity_idx_to_activity_name_map[activity_idx]
 
     def n_activities(self) -> int:
         assert (
             self.activity_idx_to_activity_name_map is not None
-        ), "init subclass of Config that defines the var activity_idx_to_activity_name_map"
+        ), "A subclass of Config which initializes the var activity_idx_to_activity_name_map should be used to access activity mapping."
         return len(self.activity_idx_to_activity_name_map)
 
 
