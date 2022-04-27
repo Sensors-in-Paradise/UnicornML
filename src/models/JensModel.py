@@ -136,7 +136,7 @@ class JensModel(RainbowModel):
                     self.window_size // 2
                 )  # 50% overlap!!!!!!!!! - important for the waste calculation
                 windows.append(
-                    Window(window_sensor_array, int(activity), recording.subject)
+                    Window(window_sensor_array, int(activity), recording.subject, recording.recording_index)
                 )
 
             # if the frame contains different activities or from different objects, find the next start point

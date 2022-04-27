@@ -95,6 +95,7 @@ def load_opportunity_dataset(opportunity_dataset_path: str) -> "list[Recording]"
                 lambda label: settings.activity_initial_num_to_activity_idx[label]
             ),  # Use `[0]` to get only one activity | maps 0, 101, 102, 103, 104, 105 to 0, 1, 2, 3, 4, 5
             subject = f"{sub}",
+            recording_index=rec
         ))
 
     print(f"\n => Total {len(recordings)} recordings read")
