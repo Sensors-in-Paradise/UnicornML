@@ -46,19 +46,22 @@ def load_dataset(dataset_path: str, limit: int = None) -> "list[Recording]":
 
     # recording
     recording_folder_names = get_subfolder_names(dataset_path)
+
     recording_folder_names = [
         os.path.join(dataset_path, recording_folder_name)
         for recording_folder_name in recording_folder_names
     ]
-
+    
     if limit is not None:
-        recording_folder_names = recording_folder_names[:limit]
+        enumerated_recording_folder_names = list(enumerate(recording_folder_names[:limit]))
+    else:
+        enumerated_recording_folder_names = list(enumerate(recording_folder_names))
 
     # USE ONE (Multiprocessing or Single Thread)
     # Multiprocessing:
     pool = Pool()
     recordings = pool.imap_unordered(
-        read_recording_from_folder, recording_folder_names, 10
+        read_recording_from_folder, enumerated_recording_folder_names, 10
     )
     pool.close()
     pool.join()
@@ -69,10 +72,12 @@ def load_dataset(dataset_path: str, limit: int = None) -> "list[Recording]":
     return list(filter(lambda x: x is not None, recordings))
 
 
-def read_recording_from_folder(recording_folder_path: str):
+def read_recording_from_folder(enumerated_recording_folder_names: 'tuple(int, str)'):
+    recording_folder_path = enumerated_recording_folder_names[1]
+    recording_idx = enumerated_recording_folder_names[0]
     try:
         subject_folder_name = get_subject_folder_name(recording_folder_path)
-        return create_recording(recording_folder_path, subject_folder_name)
+        return create_recording(recording_folder_path, subject_folder_name, recording_idx)
     except Exception as e:
         print("Error while reading recording from folder: " + recording_folder_path)
         print(e)
@@ -142,7 +147,7 @@ def get_activity_dataframe(time_frame, recording_folder_path: str) -> pd.DataFra
     return activities_per_timestep
 
 
-def create_recording(recording_folder_path: str, subject: str) -> Recording:
+def create_recording(recording_folder_path: str, subject: str, recording_idx: int) -> Recording:
     """
     Returns a recording
     Gets a XSens recorind folder path, loops over sensor files, concatenates them, adds activity and subject, returns a recording
@@ -177,7 +182,7 @@ def create_recording(recording_folder_path: str, subject: str) -> Recording:
     if sensor_frame is None:
         return None
 
-    return Recording(sensor_frame, time_frame, activity, subject)
+    return Recording(sensor_frame, time_frame, activity, subject, recording_idx)
 
 
 def reorder_sensor_columns(
