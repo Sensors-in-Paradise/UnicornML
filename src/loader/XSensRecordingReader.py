@@ -106,8 +106,18 @@ class XSensRecordingReader(object):
 
     def __merge_frames(frame1, frame2):
         frame2 = XSensRecordingReader.__normalize_SampleTimeFine(frame1, frame2)
-        return pd.merge_asof(frame1, frame2, on='SampleTimeFine', tolerance=16000, direction='nearest')
-        # return pd.merge(frame1, frame2, on='SampleTimeFine', how='outer')
+        
+        # join on frame1
+        df1_2 = pd.merge_asof(frame1, frame2, on='SampleTimeFine', tolerance=16000, direction='nearest')
+        
+        # join on frame2
+        df2_1 = pd.merge_asof(frame2, frame1, on='SampleTimeFine', tolerance=16000, direction='nearest')
+
+        # concat frame1-join with frame2-joins where the last column values (those should always be from frame1) are NaN (equivalent to full outer join)
+        df_outer_joined = pd.concat([df1_2,df2_1[df2_1.iloc[:, -1].isnull()]])
+        df_outer_joined.sort_values(["SampleTimeFine"], inplace=True)
+        return df_outer_joined
+
     @staticmethod
     def __normalize_SampleTimeFine(frame1, frame2):
         frame1_first_SampleTimeFine = frame1.iloc[0]['SampleTimeFine']
