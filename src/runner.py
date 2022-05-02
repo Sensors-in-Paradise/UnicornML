@@ -20,4 +20,8 @@ from utils import settings
 
 
 if __name__ == "__main__":
+<<<<<<< HEAD
     import experiments.sonar_base
+=======
+    import experiments.recording_unique_identifier
+>>>>>>> 89d745c74f5828435aeae4740007f927a55b28b3
