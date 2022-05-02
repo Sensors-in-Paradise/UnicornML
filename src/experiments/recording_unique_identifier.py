@@ -1,6 +1,6 @@
 import os
 import random
-from loader.load_dataset import load_dataset
+from loader.load_sonar_dataset import load_sonar_dataset as load_dataset
 from loader.load_opportunity_dataset import load_opportunity_dataset
 from loader.Preprocessor import Preprocessor
 import utils.settings as settings
