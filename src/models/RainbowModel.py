@@ -97,7 +97,7 @@ class RainbowModel(ABC):
             recording_windows = list(
                 map(
                     lambda sensor_subarray: Window(
-                        sensor_subarray, recording.activity, recording.subject
+                        sensor_subarray, recording.activity, recording.subject, recording.recording_index
                     ),
                     sensor_subarrays,
                 )

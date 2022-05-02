@@ -21,4 +21,3 @@ from utils import settings
 
 if __name__ == "__main__":
     import experiments.sonar_base
-    
