@@ -118,7 +118,7 @@ class RainbowModel(ABC):
         # to_categorical converts the activity_array to the dimensions needed
         activity_vectors = to_categorical(
             np.array(activities),
-            num_classes=len(settings.ACTIVITIES),
+            num_classes=settings.DATA_CONFIG.n_activities(),
         )
 
         return np.array(sensor_arrays), np.array(activity_vectors)

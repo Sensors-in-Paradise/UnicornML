@@ -11,6 +11,14 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true
+        }, 
+        {
+            "name": "Python: runner.py",
+            "type": "python",
+            "request": "launch",
+            "program": "src/runner.py",
+            "console": "integratedTerminal",
+            "justMyCode": true
         }
     ]
 }

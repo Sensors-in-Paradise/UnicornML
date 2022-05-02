@@ -134,10 +134,10 @@ def reorder_sensor_columns(sensor_frame: pd.DataFrame) -> pd.DataFrame:
         else:
             column_suffix_dict[ending] = [column_name]
 
-    # assert list(column_suffix_dict.keys()) == settings.SENSOR_SUFFIX_ORDER ... only same elements
+    # assert list(column_suffix_dict.keys()) == settings.DATA_CONFIG.sensor_suffix_order ... only same elements
 
     column_names_ordered = []
-    for sensor_suffix in settings.SENSOR_SUFFIX_ORDER:
+    for sensor_suffix in settings.DATA_CONFIG.sensor_suffix_order:
         column_names_ordered.extend(column_suffix_dict[sensor_suffix])
 
     return sensor_frame[column_names_ordered]

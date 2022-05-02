@@ -17,6 +17,6 @@ def new_saved_experiment_folder(experiment_name):
     currentDT_str = currentDT.strftime("%y-%m-%d_%H-%M-%S_%f")
     folder_name = currentDT_str + "-" + experiment_name
 
-    experiment_folder_path = os.path.join(settings.saved_experiments_path, folder_name)
+    experiment_folder_path = os.path.join(settings.SAVED_EXPERIMENTS_PATH, folder_name)
     create_folders_in_path(experiment_folder_path)
     return experiment_folder_path

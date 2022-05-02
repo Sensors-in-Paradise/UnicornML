@@ -8,6 +8,7 @@ from utils import settings
 # import tests.test_original_jens_windowize
 # import tests.test_new_experiment_folder
 # import tests.test_compare_model_input
+# import experiments.leave_subject_out
 
 # EXPERIMENTS
 # import experiments.hello_world
@@ -19,4 +20,4 @@ from utils import settings
 
 
 if __name__ == "__main__":
-    import experiments.recording_unique_identifier
+    import experiments.sonar_base
