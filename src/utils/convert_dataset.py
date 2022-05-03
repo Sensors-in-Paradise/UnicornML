@@ -1,6 +1,5 @@
 from copy import deepcopy
 from typing import List
-from cv2 import normalize
 import numpy as np
 import pandas as pd
 from scipy.spatial.transform import Rotation as R, RotationSpline
@@ -306,7 +305,7 @@ def convert_to_relative_sensor_data(recordings: 'list[Recording]') -> 'list[Reco
 
             normalized_vectors = np.asarray(normalized_vectors)
             assert normalized_vectors.shape == relative_vectors.shape
-            
+
             recording.sensor_frame.iloc[:, columns_idx] = normalized_vectors
     
     return recordings
