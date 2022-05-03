@@ -20,5 +20,5 @@ from utils import settings
 
 
 if __name__ == "__main__":
-    import experiments.normalize_SampleTimeFine
-    
+    import experiments.sonar_base
+

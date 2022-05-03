@@ -43,26 +43,29 @@ def load_sonar_dataset(dataset_path: str, limit_n_recs: int = None, multiprocess
 
     # recording
     recording_folder_names = get_subfolder_names(dataset_path)
+
     recording_folder_names = [
         os.path.join(dataset_path, recording_folder_name)
         for recording_folder_name in recording_folder_names
     ]
-
-    if limit_n_recs is not None:
-        recording_folder_names = recording_folder_names[:limit_n_recs]
     
-    recordings = None
+    if limit_n_recs is not None:
+        enumerated_recording_folder_names = list(enumerate(recording_folder_names[:limit_n_recs]))
+    else:
+        enumerated_recording_folder_names = list(enumerate(recording_folder_names))
+
+    # USE ONE (Multiprocessing or Single Thread)
+    # Multiprocessing:
     if multiprocessing:
-        # USE ONE (Multiprocessing or Single Thread)
-        # Multiprocessing:
         pool = Pool()
         recordings = pool.imap_unordered(
-            read_recording_from_folder, recording_folder_names, 10
+            read_recording_from_folder, enumerated_recording_folder_names, 10
         )
         pool.close()
         pool.join()
+
+    # Single thread:
     else:
-        # Single thread:
         recordings = [read_recording_from_folder(recording_folder_name, continue_on_error = True) for recording_folder_name in recording_folder_names]
 
     recordings = list(filter(lambda x: x is not None, recordings))
@@ -70,10 +73,12 @@ def load_sonar_dataset(dataset_path: str, limit_n_recs: int = None, multiprocess
     return recordings
 
 
-def read_recording_from_folder(recording_folder_path: str, continue_on_error: bool = True):
-    try: 
-        subject = get_subject_folder_name(recording_folder_path)
-        return create_recording(recording_folder_path, subject)
+def read_recording_from_folder(enumerated_recording_folder_names: 'tuple(int, str)', continue_on_error: bool = True):
+    recording_folder_path = enumerated_recording_folder_names[1]
+    recording_idx = enumerated_recording_folder_names[0]
+    try:
+        subject_folder_name = get_subject_folder_name(recording_folder_path)
+        return create_recording(recording_folder_path, subject_folder_name, recording_idx)
     except Exception as e:
         if continue_on_error:
             print("===> Will skip Recording, because error while reading! path:" + recording_folder_path + "\nError:\n\t" + str(e))
@@ -150,7 +155,7 @@ def get_activity_dataframe(time_frame, recording_folder_path: str) -> pd.DataFra
     return activities_per_timestep
 
 
-def create_recording(recording_folder_path: str, subject: str) -> Recording:
+def create_recording(recording_folder_path: str, subject: str, recording_idx: int) -> Recording:
     """
     Returns a recording
     Gets a XSens recorind folder path, loops over sensor files, concatenates them, adds activity and subject, returns a recording
@@ -185,7 +190,7 @@ def create_recording(recording_folder_path: str, subject: str) -> Recording:
     if sensor_frame is None:
         return None
 
-    return Recording(sensor_frame, time_frame, activity, subject)
+    return Recording(sensor_frame, time_frame, activity, subject, recording_idx)
 
 
 def reorder_sensor_columns(

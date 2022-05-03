@@ -28,12 +28,16 @@ class Recording:
         time_frame: pd.Series,
         activities: pd.Series,
         subject: str,
+        recording_index: int
     ) -> None:
         assert_type(
             [
                 (sensor_frame, pd.DataFrame),
                 (time_frame, pd.Series),
-                (activities, pd.Series)            ]
+                (activities, pd.Series),
+                (subject, str),
+                (recording_index, int)
+            ]
         )
         assert isinstance(activities[0], np.float64) or isinstance(activities[0], np.int64)
         assert sensor_frame.shape[0] == time_frame.shape[0], "sensor_frame and time_frame have to have the same length"
@@ -42,4 +46,5 @@ class Recording:
         self.time_frame = time_frame
         self.activities = activities
         self.subject = subject
+        self.recording_index = recording_index
 
