@@ -66,7 +66,7 @@ def load_sonar_dataset(dataset_path: str, limit_n_recs: int = None, multiprocess
 
     # Single thread:
     else:
-        recordings = [read_recording_from_folder(recording_folder_name, continue_on_error = True) for recording_folder_name in recording_folder_names]
+        recordings = [read_recording_from_folder(recording_folder_name, continue_on_error = True) for recording_folder_name in enumerated_recording_folder_names]
 
     recordings = list(filter(lambda x: x is not None, recordings))
     assert len(recordings) > 0, "load_sonar_dataset: recordings empty!"
@@ -88,13 +88,13 @@ def read_recording_from_folder(enumerated_recording_folder_names: 'tuple(int, st
 
 
 def get_subject_folder_name(recording_folder_path: str) -> str:
-    with open(recording_folder_path + os.path.sep + "metadata.json", "r") as f:
+    with open(recording_folder_path + os.path.sep + "metadata.json", "r", encoding="utf8") as f:
         data = json.load(f)
     return data["person"]
 
 
 def get_activity_dataframe(time_frame, recording_folder_path: str) -> pd.DataFrame:
-    with open(recording_folder_path + os.path.sep + "metadata.json", "r") as f:
+    with open(recording_folder_path + os.path.sep + "metadata.json", "r", encoding="utf8") as f:
         data = json.load(f)
     # The activities as a list of objects with label & timeStarted
     activities_meta = data["activities"]
