@@ -10,7 +10,10 @@ from utils import settings
 from utils.Recording import Recording
 from loader.XSensRecordingReader import XSensRecordingReader
 
-def load_sonar_dataset(dataset_path: str, limit_n_recs: int = None, multiprocessing: bool = True) -> "list[Recording]":
+def initialize_dataconfig(data_config):
+    settings.init(data_config)
+
+def load_sonar_dataset(dataset_path: str, limit_n_recs: int = None, multiprocessing: bool = True, data_config = None) -> "list[Recording]":
     """
     Returns a list of the raw recordings (activities, subjects included, None values) (different representaion of dataset)
     directory structure bias! not shuffled!
@@ -35,7 +38,9 @@ def load_sonar_dataset(dataset_path: str, limit_n_recs: int = None, multiprocess
             ...
 
     """
-
+    if multiprocessing:
+        assert data_config is not None
+        
     if not os.path.exists(dataset_path):
         raise Exception("The dataset_path does not exist")
 
@@ -57,7 +62,7 @@ def load_sonar_dataset(dataset_path: str, limit_n_recs: int = None, multiprocess
     # USE ONE (Multiprocessing or Single Thread)
     # Multiprocessing:
     if multiprocessing:
-        pool = Pool()
+        pool = Pool(10, initializer=initialize_dataconfig, initargs=(data_config,))
         recordings = pool.imap_unordered(
             read_recording_from_folder, enumerated_recording_folder_names, 10
         )
