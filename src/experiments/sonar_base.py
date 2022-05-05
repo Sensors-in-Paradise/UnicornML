@@ -21,12 +21,12 @@ from utils.save_all_recordings import save_all_recordings, load_all_recordings
 from utils.array_operations import split_list_by_percentage
 
 # Init
-data_config = SonarConfig(dataset_path='data/sonar-dataset')
+data_config = SonarConfig(dataset_path='/dhc/groups/bp2021ba1/data/SONAR')
 settings.init(data_config)
 random.seed(1678978086101)
 
 # Load dataset
-recordings = settings.DATA_CONFIG.load_dataset(limit_n_recs=10, multiprocessing=False)
+recordings = settings.DATA_CONFIG.load_dataset( multiprocessing=False)
 
 # Preprocess
 recordings = Preprocessor().our_preprocess(recordings)
