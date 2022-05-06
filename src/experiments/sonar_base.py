@@ -26,7 +26,7 @@ settings.init(data_config)
 random.seed(1678978086101)
 
 # Load dataset
-recordings = settings.DATA_CONFIG.load_dataset( multiprocessing=False)
+recordings = settings.DATA_CONFIG.load_dataset(limit_n_recs=10, multiprocessing=False)
 
 # Preprocess
 recordings = Preprocessor().our_preprocess(recordings)
