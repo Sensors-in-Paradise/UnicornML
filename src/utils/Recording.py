@@ -39,6 +39,7 @@ class Recording:
                 (recording_index, int)
             ]
         )
+        print(activities[0])
         assert isinstance(activities[0], np.float64) or isinstance(activities[0], np.int64)
         assert sensor_frame.shape[0] == time_frame.shape[0], "sensor_frame and time_frame have to have the same length"
         assert sensor_frame.shape[0] == activities.shape[0], "sensor_frame and activities have to have the same length"        

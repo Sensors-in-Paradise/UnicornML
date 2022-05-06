@@ -1,4 +1,4 @@
-from apps.Tobi_UnicornML.src.utils.cache_recordings import load_recordings
+from utils.cache_recordings import load_recordings
 from utils.typing import assert_type
 from loader.load_opportunity_dataset import load_opportunity_dataset
 from loader.load_sonar_dataset import load_sonar_dataset
@@ -221,7 +221,7 @@ class Sonar22CategoriesConfig(DataConfig):
         self.csv_header_size = 8
 
     def load_dataset(self, **args) -> "list[Recording]":
-        return load_recordings(self.dataset_path, **args)
+        return load_recordings(self.dataset_path,self.raw_label_to_activity_idx_map, **args)
 
     people = [
         "unknown",

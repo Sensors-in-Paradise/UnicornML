@@ -21,7 +21,7 @@ from utils.save_all_recordings import save_all_recordings, load_all_recordings
 from utils.array_operations import split_list_by_percentage
 
 # Init
-data_config = SonarConfig(dataset_path='/dhc/groups/bp2021ba1/data/SONAR')
+data_config = SonarConfig(dataset_path='data/sonar-dataset')
 settings.init(data_config)
 random.seed(1678978086101)
 

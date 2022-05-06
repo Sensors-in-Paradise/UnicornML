@@ -13,6 +13,7 @@ from utils import settings
 # EXPERIMENTS
 # import experiments.hello_world
 # import experiments.opportunity_jens_cnn
+# import experiments.transferLearningTobi
 
 # settings.init("sonar")
 # import experiments.sonar_cnn
@@ -20,5 +21,5 @@ from utils import settings
 
 
 if __name__ == "__main__":
-    import experiments.transferLearning
+    import experiments.sonar_base
 
