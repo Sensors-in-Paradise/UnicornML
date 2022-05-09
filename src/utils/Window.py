@@ -11,9 +11,20 @@ class Window:
     subject: str
     recording_index: int
 
-    def __init__(self, sensor_array: np.ndarray, activity: int, subject: str, recording_index: int) -> None:
+    def __init__(
+        self,
+        sensor_array: np.ndarray,
+        activity: int,
+        subject: str,
+        recording_index: int,
+    ) -> None:
         assert_type(
-            [(sensor_array, (np.ndarray, np.generic)), (activity, int), (subject, str), (recording_index, int)]
+            [
+                (sensor_array, (np.ndarray, np.generic)),
+                (activity, int),
+                (subject, int),
+                (recording_index, int),
+            ]
         )
         self.sensor_array = sensor_array
         self.activity = activity

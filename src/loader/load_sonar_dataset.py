@@ -10,10 +10,17 @@ from utils import settings
 from utils.Recording import Recording
 from loader.XSensRecordingReader import XSensRecordingReader
 
+
 def initialize_dataconfig(data_config):
     settings.init(data_config)
 
-def load_sonar_dataset(dataset_path: str, limit_n_recs: int = None, multiprocessing: bool = True, data_config = None) -> "list[Recording]":
+
+def load_sonar_dataset(
+    dataset_path: str,
+    limit_n_recs: int = None,
+    multiprocessing: bool = True,
+    data_config=None,
+) -> "list[Recording]":
     """
     Returns a list of the raw recordings (activities, subjects included, None values) (different representaion of dataset)
     directory structure bias! not shuffled!
@@ -39,8 +46,10 @@ def load_sonar_dataset(dataset_path: str, limit_n_recs: int = None, multiprocess
 
     """
     if multiprocessing:
-        assert data_config is not None
-        
+        assert (
+            data_config is not None
+        ), "data config needs to be accessible, you need to do settings.init in the runner.py"
+
     if not os.path.exists(dataset_path):
         raise Exception("The dataset_path does not exist")
 
@@ -53,9 +62,11 @@ def load_sonar_dataset(dataset_path: str, limit_n_recs: int = None, multiprocess
         os.path.join(dataset_path, recording_folder_name)
         for recording_folder_name in recording_folder_names
     ]
-    
+
     if limit_n_recs is not None:
-        enumerated_recording_folder_names = list(enumerate(recording_folder_names[:limit_n_recs]))
+        enumerated_recording_folder_names = list(
+            enumerate(recording_folder_names[:limit_n_recs])
+        )
     else:
         enumerated_recording_folder_names = list(enumerate(recording_folder_names))
 
@@ -71,35 +82,50 @@ def load_sonar_dataset(dataset_path: str, limit_n_recs: int = None, multiprocess
 
     # Single thread:
     else:
-        recordings = [read_recording_from_folder(recording_folder_name, continue_on_error = True) for recording_folder_name in enumerated_recording_folder_names]
+        recordings = [
+            read_recording_from_folder(recording_folder_name, continue_on_error=False)
+            for recording_folder_name in enumerated_recording_folder_names
+        ]
 
     recordings = list(filter(lambda x: x is not None, recordings))
     assert len(recordings) > 0, "load_sonar_dataset: recordings empty!"
     return recordings
 
 
-def read_recording_from_folder(enumerated_recording_folder_names: 'tuple(int, str)', continue_on_error: bool = True):
+def read_recording_from_folder(
+    enumerated_recording_folder_names: "tuple(int, str)", continue_on_error: bool = True
+):
     recording_folder_path = enumerated_recording_folder_names[1]
     recording_idx = enumerated_recording_folder_names[0]
     try:
         subject_folder_name = get_subject_folder_name(recording_folder_path)
-        return create_recording(recording_folder_path, subject_folder_name, recording_idx)
+        return create_recording(
+            recording_folder_path, subject_folder_name, recording_idx
+        )
     except Exception as e:
         if continue_on_error:
-            print("===> Will skip Recording, because error while reading! path:" + recording_folder_path + "\nError:\n\t" + str(e))
+            print(
+                "===> Will skip Recording, because error while reading! path:"
+                + recording_folder_path
+                + "\nError:\n\t"
+                + str(e)
+            )
             return None
         raise e
 
 
-
 def get_subject_folder_name(recording_folder_path: str) -> str:
-    with open(recording_folder_path + os.path.sep + "metadata.json", "r", encoding="utf8") as f:
+    with open(
+        recording_folder_path + os.path.sep + "metadata.json", "r", encoding="utf8"
+    ) as f:
         data = json.load(f)
     return data["person"]
 
 
 def get_activity_dataframe(time_frame, recording_folder_path: str) -> pd.DataFrame:
-    with open(recording_folder_path + os.path.sep + "metadata.json", "r", encoding="utf8") as f:
+    with open(
+        recording_folder_path + os.path.sep + "metadata.json", "r", encoding="utf8"
+    ) as f:
         data = json.load(f)
     # The activities as a list of objects with label & timeStarted
     activities_meta = data["activities"]
@@ -114,9 +140,11 @@ def get_activity_dataframe(time_frame, recording_folder_path: str) -> pd.DataFra
     def label_timestamp_to_microseconds(label_obj: dict):
         label_obj["timeStarted"] = timestamp_to_microseconds(label_obj["timeStarted"])
         return label_obj
-    
+
     def str_label_to_activity_idx(label_obj: dict):
-        label_obj["label"] = settings.DATA_CONFIG.raw_label_to_activity_idx(label_obj["label"])
+        label_obj["label"] = settings.DATA_CONFIG.raw_label_to_activity_idx(
+            label_obj["label"]
+        )
         return label_obj
 
     activities_meta = list(map(label_timestamp_to_microseconds, activities_meta))
@@ -160,7 +188,9 @@ def get_activity_dataframe(time_frame, recording_folder_path: str) -> pd.DataFra
     return activities_per_timestep
 
 
-def create_recording(recording_folder_path: str, subject: str, recording_idx: int) -> Recording:
+def create_recording(
+    recording_folder_path: str, subject: str, recording_idx: int
+) -> Recording:
     """
     Returns a recording
     Gets a XSens recorind folder path, loops over sensor files, concatenates them, adds activity and subject, returns a recording
@@ -195,7 +225,13 @@ def create_recording(recording_folder_path: str, subject: str, recording_idx: in
     if sensor_frame is None:
         return None
 
-    return Recording(sensor_frame, time_frame, activity, subject, recording_idx)
+    return Recording(
+        sensor_frame=sensor_frame,
+        time_frame=time_frame,
+        activities=activity,
+        subject=settings.DATA_CONFIG.raw_subject_to_subject_idx(subject),
+        recording_index=recording_idx
+    )
 
 
 def reorder_sensor_columns(
