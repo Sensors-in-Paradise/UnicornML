@@ -23,7 +23,6 @@ class DataConfig:
     raw_label_to_activity_idx_map = None
     activity_idx_to_activity_name_map = None
 
-
     # interface (subclass responsibility to define) ------------------------------------------------------------
 
     def load_dataset(self) -> "list[Recording]":
@@ -91,7 +90,9 @@ class SonarConfig(DataConfig):
                 category["entries"] for category in self.category_labels
             )
         )
-        self.raw_label_to_activity_idx_map = {label: i for i, label in enumerate(labels)} # no relabeling applied
+        self.raw_label_to_activity_idx_map = {
+            label: i for i, label in enumerate(labels)
+        }  # no relabeling applied
         activities = {k: v for v, k in enumerate(labels)}
         self.activity_idx_to_activity_name_map = {v: k for k, v in activities.items()}
 
