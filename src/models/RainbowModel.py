@@ -119,6 +119,7 @@ class RainbowModel(ABC):
                 project=str(self.wandb_config["project"]),
                 entity=self.wandb_config["entity"],
                 name=str(self.wandb_config["name"]),
+                settings=wandb.Settings(start_method='fork')
             )
             wandb.config = {
                 "learning_rate": self.learning_rate,
@@ -127,7 +128,7 @@ class RainbowModel(ABC):
             }
             callbacks = [wandb.keras.WandbCallback()]
 
-        history = self.model.fit(
+        self.history = self.model.fit(
             X_train,
             y_train,
             validation_split=self.validation_split,
@@ -135,10 +136,10 @@ class RainbowModel(ABC):
             batch_size=self.batch_size,
             verbose=self.verbose,
             class_weight=self.class_weight,
-            callbacks=callbacks,
+            callbacks=callbacks
         )
 
-        self.history = history
+
 
     # Predict ------------------------------------------------------------------------
 

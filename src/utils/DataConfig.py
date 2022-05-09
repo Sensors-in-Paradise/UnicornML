@@ -21,7 +21,10 @@ class DataConfig:
     # Dataset Config (subclass responsibility) -----------
 
     raw_label_to_activity_idx_map = None
+    raw_subject_to_subject_idx_map = None
+
     activity_idx_to_activity_name_map = None
+    subject_idx_to_subject_name_map = None
 
     # interface (subclass responsibility to define) ------------------------------------------------------------
 
@@ -40,6 +43,19 @@ class DataConfig:
             self.raw_label_to_activity_idx_map is not None
         ), "A subclass of Config which initializes the var raw_label_to_activity_idx_map should be used to access activity mapping."
         return self.raw_label_to_activity_idx_map[label]
+
+    def raw_subject_to_subject_idx(self, subject: str) -> int:
+        assert (
+            self.raw_subject_to_subject_idx_map is not None
+        ), "A subclass of Config which initializes the var raw_subject_to_subject_idx_map should be used to access subject mapping."
+        return self.raw_subject_to_subject_idx_map[subject]
+
+    def subject_idx_to_subject_name(self, subject_idx: int) -> str:
+        assert (
+            self.subject_idx_to_subject_name_map is not None
+        ), "A subclass of Config which initializes the var subject_idx_to_subject_name_map should be used to access subject mapping."
+        assert_type((subject_idx, int))
+        return self.subject_idx_to_subject_name_map[subject_idx]
 
     def activity_idx_to_activity_name(self, activity_idx: int) -> str:
         assert (
@@ -96,6 +112,13 @@ class SonarConfig(DataConfig):
         activities = {k: v for v, k in enumerate(labels)}
         self.activity_idx_to_activity_name_map = {v: k for k, v in activities.items()}
 
+        self.raw_subject_to_subject_idx_map = {
+            key: value for value, key in enumerate(self.raw_subject_label)
+        }
+        self.subject_idx_to_subject_name_map = {
+            v: k for k, v in self.raw_subject_to_subject_idx_map.items()
+        }  # just the inverse, do relabeling here, if needed
+
         # SONAR SPECIFIC VARS --------------------------------------------------
 
         self.sensor_suffix_order = ["LF", "LW", "ST", "RW", "RF"]
@@ -104,7 +127,7 @@ class SonarConfig(DataConfig):
     def load_dataset(self, **args) -> "list[Recording]":
         return load_sonar_dataset(self.dataset_path, **args)
 
-    people = [
+    raw_subject_label = [
         "unknown",
         "christine",
         "aileen",

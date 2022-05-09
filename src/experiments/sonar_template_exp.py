@@ -38,7 +38,7 @@ experiment_name = experiment_name + "-" + currentDT_str
 data_config = SonarConfig(dataset_path='data/sonar-dataset')
 settings.init(data_config)
 window_size = 30 * 3
-n_classes = 6
+n_classes = 59
 
 # Lib -----------------------------------------------------------
 leave_recording_out_split = lambda test_percentage: lambda recordings: split_list_by_percentage(
@@ -79,7 +79,7 @@ test_train_split = lambda recordings: leave_person_out_split(test_person_idx=2)(
 
 
 # Load data
-recordings = settings.DATA_CONFIG.load_dataset()
+recordings = settings.DATA_CONFIG.load_dataset(multiprocessing=False, limit_n_recs=10)
 
 random.seed(1678978086101)
 random.shuffle(recordings)
