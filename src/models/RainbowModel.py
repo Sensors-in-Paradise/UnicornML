@@ -58,6 +58,7 @@ class RainbowModel(ABC):
         assert_type([(recordings_train[0], Recording)])
         X_train, y_train = self.windowize_convert(recordings_train)
         self.fit(X_train, y_train)
+        return X_train, y_train
 
     # Preprocess ----------------------------------------------------------------------
 
@@ -72,6 +73,8 @@ class RainbowModel(ABC):
             windows_train
         )  # many running windows in a row?, one batch too homogenous?, lets shuffle
         X_train, y_train = self.convert(windows_train)
+        unique, counts = np.unique(y_train, return_counts=True)
+        countsDict = dict(zip([settings.DATA_CONFIG.activity_idx_to_activity_name_map[item] for item in unique], counts))
         return X_train, y_train
 
     def windowize(self, recordings: "list[Recording]") -> "list[Window]":
