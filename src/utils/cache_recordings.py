@@ -24,7 +24,7 @@ def save_recordings(recordings: 'list[Recording]', path: str) -> None:
     print('Saved recordings to ' + path)
 
 
-def load_recordings(path: str, limit: int = None) -> 'list[Recording]':
+def load_recordings(path: str, activityLabelToIndexMap: dict, limit: int = None) -> 'list[Recording]':
     """
     Load the recordings from a folder containing csv files.
     """
@@ -43,12 +43,12 @@ def load_recordings(path: str, limit: int = None) -> 'list[Recording]':
 
         recording_dataframe = pd.read_csv(os.path.join(path, file))
         time_frame = recording_dataframe.loc[:, 'SampleTimeFine']
-        activities = recording_dataframe.loc[:, 'activity']
+        activities = recording_dataframe.loc[:, 'activity'].map(lambda label: activityLabelToIndexMap[label])
         sensor_frame = recording_dataframe.loc[:, 
             recording_dataframe.columns.difference(['SampleTimeFine', 'activity'])]
         subject = file.split('_')[1]
 
-        recordings.append(Recording(sensor_frame, time_frame, activities, subject))
+        recordings.append(Recording(sensor_frame, time_frame, activities, subject, index))
 
     print(f'Loaded {len(recordings)} recordings from {path}')
     
