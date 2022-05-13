@@ -5,7 +5,7 @@ import itertools
 import os
 
 
-def create_conf_matrix(path: str, y_test_pred: np.ndarray, y_test_true: np.ndarray, file_name: str = "conf_matrix") -> None:
+def create_conf_matrix(path: str, y_test_pred: np.ndarray, y_test_true: np.ndarray, file_name: str = "conf_matrix", title="Confusion Matrix") -> None:
     """
     creates and saves conf matrix as .png to path 
 
@@ -22,9 +22,8 @@ def create_conf_matrix(path: str, y_test_pred: np.ndarray, y_test_true: np.ndarr
     y_test_pred = np.argmax(y_test_pred, axis=1)
 
     # Settings
-    cm = confusion_matrix(y_test_true, y_test_pred)
+    cm = confusion_matrix(y_test_true, y_test_pred, labels= classes)
     normalize = False
-    title = 'Confusion matrix'
     cmap = plt.cm.Blues
     
     # Create Conf-Plot
