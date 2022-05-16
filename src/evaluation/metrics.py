@@ -25,6 +25,27 @@ def accuracy(prediction_vectors: np.ndarray, y_test: np.ndarray, verbose: int = 
         print(f"accuracy: {accuracy}")
     return accuracy
 
+def accuracy_threshold(prediction_vectors: np.ndarray, y_test: np.ndarray, threshold: float, verbose: int = 0) -> float:
+
+    total_predictions = 0
+    correct_predictions = 0
+    for idx, prediction in enumerate(prediction_vectors):
+        prediction_idx = np.argmax(prediction)
+        confidence = prediction[prediction_idx]
+        if confidence < threshold:
+            continue
+        true_idx = np.argmax(y_test[idx])
+        if(true_idx == prediction_idx):
+            correct_predictions += 1
+        total_predictions += 1
+    
+    accuracy = correct_predictions / total_predictions
+    if verbose:
+        print(f"accuracy of confident predictions: {accuracy}")
+        print("ignored "+len(y_test)+" predictions, which is equivalent to "+str(1-(total_predictions/len(y_test)))+"%")
+        
+    return accuracy, 1-(total_predictions/len(y_test))
+
 def average_failure_rate(prediction_vectors: np.ndarray, y_test: np.ndarray) -> float:
     """
     output y_test [0.03, 0.5, 0.3], correct label idx 2
