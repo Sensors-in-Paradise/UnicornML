@@ -14,7 +14,7 @@ from utils.array_operations import split_list_by_percentage
 
 from utils.folder_operations import new_saved_experiment_folder
 from evaluation.conf_matrix import create_conf_matrix
-from evaluation.text_metrics import append_text_metrics_for_threshold_accuracy, create_text_metrics
+from evaluation.text_metrics import append_text_metrics_for_threshold_accuracy, create_text_metrics, append_text_metrics_for_threshold_accuracy_and_relabeling_func
 from evaluation.metrics import accuracy, f1_score, accuracy_threshold
 from utils.Windowizer import Windowizer
 from sklearn.model_selection import KFold
@@ -27,6 +27,7 @@ from models.OldLSTM import OldLSTM
 from models.SenselessDeepConvLSTM import SenselessDeepConvLSTM
 from models.LeanderDeepConvLSTM import LeanderDeepConvLSTM
 from utils.DataConfig import OpportunityConfig
+from utils.threshold_relabeling import relabel_by_threshold, relabel_feed_forward, relabel_feed_backwards, relabel_by_confidence_interpolation
 
 
 experiment_name = "opportunity_template_exp"
@@ -116,12 +117,15 @@ y_test_pred = model.predict(X_test)
 experiment_folder_path = new_saved_experiment_folder(
     experiment_name
 )  # create folder to store results
-
-# model.export(experiment_folder_path) # opt: export model to folder
-create_conf_matrix(experiment_folder_path, y_test_pred, y_test)
 create_text_metrics(
     experiment_folder_path, y_test_pred, y_test, [accuracy]
-)  # TODO: at the moment only with one function working! data gets changed (passed by reference) - refactor metric functions
-append_text_metrics_for_threshold_accuracy(
-    experiment_folder_path, y_test_pred, y_test, [0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]
 )  
+
+thresholds = [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]
+relabeling_funcs = [relabel_feed_forward, relabel_feed_backwards, relabel_by_confidence_interpolation]
+for threshold in thresholds:
+    for relabeling_func in relabeling_funcs:
+        y_test_pred_new = relabel_by_threshold(y_test_pred, threshold, relabeling_func)
+        append_text_metrics_for_threshold_accuracy_and_relabeling_func(
+            experiment_folder_path, y_test_pred_new, y_test, threshold, relabeling_func
+        )  
