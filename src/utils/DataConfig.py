@@ -26,6 +26,8 @@ class DataConfig:
     activity_idx_to_activity_name_map = None
     subject_idx_to_subject_name_map = None
 
+    timestep_frequency = None # Hz
+
     # interface (subclass responsibility to define) ------------------------------------------------------------
 
     def load_dataset(self) -> "list[Recording]":
@@ -72,6 +74,9 @@ class DataConfig:
 
 
 class OpportunityConfig(DataConfig):
+
+    timestep_frequency = 30 # Hz
+    
     def __init__(self, dataset_path: str):
         self.dataset_path = dataset_path
 
@@ -98,6 +103,9 @@ class OpportunityConfig(DataConfig):
 
 
 class SonarConfig(DataConfig):
+
+    timestep_frequency = 50 # Hz
+
     def __init__(self, dataset_path: str):
         self.dataset_path = dataset_path
 

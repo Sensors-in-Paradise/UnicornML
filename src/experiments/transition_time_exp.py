@@ -27,6 +27,7 @@ from models.OldLSTM import OldLSTM
 from models.SenselessDeepConvLSTM import SenselessDeepConvLSTM
 from models.LeanderDeepConvLSTM import LeanderDeepConvLSTM
 from utils.DataConfig import SonarConfig
+from loader.transition_time import transition_time_cut
 
 
 experiment_name = "sonar_template_exp"
@@ -77,19 +78,15 @@ test_train_split = lambda recordings: leave_person_out_split(test_person_idx=2)(
     recordings
 )
 
-
 # Load data
 recordings = settings.DATA_CONFIG.load_dataset(multiprocessing=False, limit_n_recs=10)
-
-
-raise Exception("Done")
-
 
 random.seed(1678978086101)
 random.shuffle(recordings)
 
 # Preprocessing
 recordings = preprocess(recordings)
+recordings = transition_time_cut(recordings)
 
 # Test Train Split
 recordings_train, recordings_test = test_train_split(recordings)

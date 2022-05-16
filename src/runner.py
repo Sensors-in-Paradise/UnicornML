@@ -20,5 +20,5 @@ from utils import settings
 
 
 if __name__ == "__main__":
-    import experiments.sonar_template_exp
+    import experiments.transition_time_exp
 
