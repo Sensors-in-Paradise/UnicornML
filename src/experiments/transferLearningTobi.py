@@ -11,7 +11,7 @@ import numpy as np
 from sklearn.model_selection import KFold
 from sklearn.metrics import f1_score
 from models.RainbowModel import RainbowModel
-
+import pandas as pd
 import utils.settings as settings
 from evaluation.metrics import accuracy
 from evaluation.conf_matrix import create_conf_matrix
@@ -19,18 +19,20 @@ from loader.Preprocessor import Preprocessor
 from models.JensModel import JensModel
 from utils.filter_activities import filter_activities
 from utils.folder_operations import new_saved_experiment_folder
-from utils.DataConfig import Sonar22CategoriesConfig
+from utils.DataConfig import Sonar22CategoriesConfig, OpportunityConfig
 from tensorflow.keras.layers import (Dense)
 from utils.Recording import Recording
 import matplotlib.pyplot as plt
 
 # Init
 # TODO: refactor, find out why confusion matrix sometimes shows different results than accuracy
+# TODO: - make train and test datasets evenly distributed
+#       - make 
 """ 
 Number of recordings per person
 {'connie.csv': 6, 'alex.csv': 38, 'trapp.csv': 9, 'anja.csv': 13, 'aileen.csv': 52, 'florian.csv': 16, 'brueggemann.csv': 36, 'oli.csv': 20, 'rauche.csv': 9, 'b2.csv': 6, 'yvan.csv': 8, 'christine.csv': 7, 'mathias.csv': 2, 'kathi.csv': 17}
 """
-data_config = Sonar22CategoriesConfig(dataset_path='/dhc/groups/bp2021ba1/data/filtered_dataset_without_null')
+data_config = OpportunityConfig(dataset_path='/dhc/groups/bp2021ba1/data/opportunity-dataset')#Sonar22CategoriesConfig(dataset_path='/dhc/groups/bp2021ba1/data/filtered_dataset_without_null')
 settings.init(data_config)
 random.seed(1678978086101)
 
@@ -52,10 +54,31 @@ experiment_folder_path = new_saved_experiment_folder(
     "transferLearningTobi"
 )
 
+def count_activities_per_person(recordings: "list[Recording]"): 
+    values = pd.DataFrame({recordings[0].subject: recordings[0].activities.value_counts()}) 
+    for rec in recordings[1:]: 
+        values = values.add(pd.DataFrame({rec.subject: rec.activities.value_counts()}), fill_value=0) 
+ 
+    return values
+
+def plot_activities_per_person(recordings: "list[Recording]", fileName: str, title: str = ""):
+    values = count_activities_per_person(recordings) 
+    
+    values.plot.bar(figsize=(22,16)) 
+    plt.title(title) 
+    plt.xlabel("x") 
+    plt.ylabel("y") 
+    plt.savefig(os.path.join(experiment_folder_path,fileName))
+
+
 def save_pie_chart_from_dict(labelsAndFrequencyDict: dict, fileName: str, title: str = None, subtitle: str = None)-> None:
     plt.cla()
     plt.clf()
-    plt.pie([labelsAndFrequencyDict[label] for label in labelsAndFrequencyDict.keys()], labels=[f"{settings.DATA_CONFIG.raw_label_to_activity_idx_map[label]} {label} {int(labelsAndFrequencyDict[label]/60)} secs" for label in labelsAndFrequencyDict.keys()])
+    print(labelsAndFrequencyDict)
+    print(settings.DATA_CONFIG.raw_label_to_activity_idx_map)
+    data = [labelsAndFrequencyDict[label] for label in labelsAndFrequencyDict.keys()]
+    labels = [f"{settings.DATA_CONFIG.raw_label_to_activity_idx_map[label]} {label} {int(labelsAndFrequencyDict[label]/60)} secs" for label in labelsAndFrequencyDict.keys()]
+    plt.pie(data, labels=labels)
     if title:
         plt.suptitle(title, y=1.05, fontsize=18)
     if subtitle:
@@ -72,11 +95,24 @@ def getActivityCountsFromRecordings(recordings: "list[Recording]")-> dict:
                 resultDict[activity_id] += count
             else:
                 resultDict[activity_id] = count 
+    for activity in settings.DATA_CONFIG.raw_label_to_activity_idx_map:
+        if not activity in resultDict:
+            resultDict[activity] = 0
     return resultDict
+
+def getActivityCounts(yTrue):
+    unique, counts = np.unique(np.argmax(yTrue, axis=1), return_counts=True)
+    countsDict = dict(zip([settings.DATA_CONFIG.activity_idx_to_activity_name_map[item] for item in unique], counts))
+    return countsDict
 
 def save_activity_distribution_pie_chart(yTrue, fileName: str, title: str=None, subtitle: str = None) -> None:
     unique, counts = np.unique(np.argmax(yTrue, axis=1), return_counts=True)
     countsDict = dict(zip([settings.DATA_CONFIG.activity_idx_to_activity_name_map[item] for item in unique], counts))
+    subtitleSuffix = f"Mean activity duration difference from mean activity duration: {int(getMeanCountDifferenceFromMeanActivityCount(yTrue)/60)}s"
+    if subtitle != None:
+        subtitle += "\n"+subtitleSuffix
+    else:
+        subtitle = subtitleSuffix
     save_pie_chart_from_dict(countsDict, fileName, title, subtitle)
 
 def count_recordings_of_people(recordings: "list[Recording]")-> dict:
@@ -87,6 +123,20 @@ def count_recordings_of_people(recordings: "list[Recording]")-> dict:
         else:
             peopleCount[recording.subject] = 1
     return peopleCount
+
+def getMeanCountDifferenceFromMeanActivityCount(yTrue)-> float:
+    activityCounts = getActivityCounts(yTrue)
+
+    activitySum = 0
+    for activity in activityCounts:
+       activitySum += activityCounts[activity]
+    meanActivityCount = activitySum / len(activityCounts)
+
+    diffSum = 0
+    for activity in activityCounts:
+       diffSum += abs(activityCounts[activity]-meanActivityCount)
+    
+    return diffSum / len(activityCounts)
 
 def get_people_in_recordings(recordings: "list[Recording]") -> list[str]:
     people = set()
@@ -118,12 +168,25 @@ def freezeDenseLayers(model: RainbowModel):
     for layer in model.model.layers:
         layer.trainable = type(layer) == Dense
 
+def getAveragesOfAttributesInDicts(dicts: list[dict[str, float]]) -> dict[str, float]:
+    result = {}
+    for d in dicts:
+        for key in d:
+            if key in result:
+                result[key] += d[key] / len(dicts)
+            else:
+                result[key] = d[key] / len(dicts)
+    return result
+
 people = get_people_in_recordings(recordings)
 numRecordingsOfPeopleDict = count_recordings_of_people(recordings)
-peopleToLeaveOutPerExpirement = list(filter(lambda person: numRecordingsOfPeopleDict[person]>5,people)) #["anja.csv", "florian.csv", "oli.csv", "rauche.csv"]#, "oli.csv", "rauche.csv"
+minimumRecordingsPerLeftOutPerson = 1
+peopleToLeaveOutPerExpirement = list(filter(lambda person: numRecordingsOfPeopleDict[person]>minimumRecordingsPerLeftOutPerson,people)) #["anja.csv", "florian.csv", "oli.csv", "rauche.csv"]#, "oli.csv", "rauche.csv"
 
 k_fold_splits = 3
 result = [["fold id \ Left out person"]+[["**FOLD "+str(round(i/3))+"**", "without TL", "with TL"][i%3] for i in range(k_fold_splits*3)]+["Average without TL"]+["Average with TL"]]
+
+TLsuccessForUniformDistributionScore = []
 
 for personIndex, personToLeaveOut in enumerate(peopleToLeaveOutPerExpirement):
     print(f"==============================================================================\nLeaving person {personToLeaveOut} out {personIndex}/{len(peopleToLeaveOutPerExpirement)}\n==============================================================================\n")
@@ -137,7 +200,7 @@ for personIndex, personToLeaveOut in enumerate(peopleToLeaveOutPerExpirement):
     resultCol = [f"Subject {personId}<br />Train activity distribution <br />![Base model train activity distribution]({activityDistributionFileName})"]
     resultWithoutTLVals = []
     resultWithTLVals = []
-
+    model.n_epochs = 1
     model.model.save_weights("ckpt")
     # Evaluate on left out person
     k_fold = KFold(n_splits=k_fold_splits, random_state=None)
@@ -171,19 +234,21 @@ for personIndex, personToLeaveOut in enumerate(peopleToLeaveOutPerExpirement):
         accuracyWithTransferLearning, f1ScoreMacroWithTransferLearning, f1ScoreWeightedWithTransferLearning, _ = evaluateOnRecordings(model, recordingsOfLeftOutPerson_test, confMatrixWithTLFileName, f"With TL, validated on subject {personId}, fold {index}")
         print(f"Accuracy on test data of left out person {accuracyWithTransferLearning}")
 
+        TLsuccessForUniformDistributionScore.append((getMeanCountDifferenceFromMeanActivityCount(yTrainTrue),accuracyWithTransferLearning-accuracyWithoutTransferLearning))
         # Append report
         resultCol.append("Test Activity Distribution "+f"<br />![Test activity distribution]({activityDistributionTestFileName})")
         resultCol.append("Accuracy: "+str(accuracyWithoutTransferLearning)+f"<br />F1-Score Macro: {f1ScoreMacroWithoutTransferLearning}<br />F1-Score Weighted: {f1ScoreWeightedWithoutTransferLearning}<br />![confusion matrix]({confMatrixWithoutTLFileName}.png)")
         resultCol.append("Accuracy: "+str(accuracyWithTransferLearning)+f"<br />F1-Score Macro: {f1ScoreMacroWithTransferLearning}<br />F1-Score Weighted: {f1ScoreWeightedWithTransferLearning}<br />TL-Train activity distribution <br />![TL-Train activity distribution]({tlActivityDistributionFileName})"+f"<br />![confusion matrix]({confMatrixWithTLFileName}.png)")
-        resultWithoutTLVals.append(accuracyWithoutTransferLearning)
-        resultWithTLVals.append(accuracyWithTransferLearning)
-    resultCol.append(np.average(resultWithoutTLVals))
-    resultCol.append(np.average(resultWithTLVals))
+        resultWithoutTLVals.append({"Accuracy": accuracyWithoutTransferLearning, "F1-score Macro":f1ScoreMacroWithoutTransferLearning,"F1-score Weighted": f1ScoreWeightedWithoutTransferLearning})
+        resultWithTLVals.append({"Accuracy": accuracyWithTransferLearning, "F1-score Macro":f1ScoreMacroWithTransferLearning,"F1-score Weighted": f1ScoreWeightedWithTransferLearning})
+
+    metricAvgWithoutTL = getAveragesOfAttributesInDicts(resultWithoutTLVals)
+    metricAvgWithTL = getAveragesOfAttributesInDicts(resultWithTLVals)
+    resultCol.append("<br />".join([f"{metric}: {metricAvgWithoutTL[metric]}" for metric in metricAvgWithoutTL]))
+    resultCol.append("<br />".join([f"{metric}: {metricAvgWithTL[metric]}" for metric in metricAvgWithTL]))
     result = result + [resultCol]
 
 print("result",result)
-
-
 
 
 resultT = np.array(result).T
@@ -192,7 +257,15 @@ print("resultT",resultT)
 wholeDataSetActivityDistributionFileName = "wholeDatasetActivityDistribution.png"
 _, yAll = instanciateModel().windowize_convert(recordings)
 save_activity_distribution_pie_chart(yAll,  wholeDataSetActivityDistributionFileName)
-result_md = f"# Whole dataset distribution\n![activityDistribution]({wholeDataSetActivityDistributionFileName})"
+result_md = f"# Experiment"
+result_md += f"\nDoing transfer learning only with one epoch"
+result_md += f"\n# Dataset"
+result_md += f"\n## Whole dataset distribution\n![activityDistribution]({wholeDataSetActivityDistributionFileName})"
+result_md += f"\nUsing dataset `{settings.DATA_CONFIG.dataset_path}`"
+activitiesPerPersonFilename = "actvitiesPerPerson.png"
+plot_activities_per_person(recordings, activitiesPerPersonFilename, "Activities per person")
+result_md = f"#\n## Activities per subject\n![activityDistribution]({activitiesPerPersonFilename})"
+result_md += f"\nLeaving people out with at least  `{minimumRecordingsPerLeftOutPerson}`"
 result_md += "\n# Experiments\n"
 for index, row in enumerate(resultT):
     for item in row:
@@ -202,7 +275,17 @@ for index, row in enumerate(resultT):
         for col in range(len(row)):
             result_md += "| -----------"
         result_md += "|\n"
+result_md += "\n# Summary"
+plt.clf()
+scatterData = np.array(TLsuccessForUniformDistributionScore)
 
+plt.scatter(scatterData[:,0], scatterData[:,1])
+plt.title("TL effects according to uniformity of training data distribution") 
+plt.xlabel("Mean activity duration difference from mean activity duration") 
+plt.ylabel("Accuracy improvement through Transfer learning ") 
+scatterFileName = "uniformityOfTrainingDataToTLimprovement.png"
+plt.savefig(os.path.join(experiment_folder_path,scatterFileName))
+result_md += f"\n# ![TL effects according to uniformity of training data distribution]({scatterFileName})"
 
 with open(os.path.join(experiment_folder_path, "results.md"), "w+") as f:
     f.writelines(result_md)

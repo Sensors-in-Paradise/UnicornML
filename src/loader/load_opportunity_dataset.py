@@ -75,7 +75,7 @@ def load_opportunity_dataset(opportunity_dataset_path: str) -> "list[Recording]"
 
     # Get column names
     col_names = []
-    with open("src/loader/opportunity_col_names", "r") as file:
+    with open("/dhc/groups/bp2021ba1/apps/Tobi_UnicornML/src/loader/opportunity_col_names", "r") as file:
         lines = file.read().splitlines()
         for line in lines:
             col_names.append(line)
@@ -92,7 +92,8 @@ def load_opportunity_dataset(opportunity_dataset_path: str) -> "list[Recording]"
             sensor_frame = file_df.loc[:, selected_feature_names], 
             time_frame = file_df.loc[:, 'MILLISEC'],
             activities = file_df.loc[:, 'HL_Activity'].map(
-                lambda label: settings.DATA_CONFIG.raw_label_to_activity_idx(label)
+                lambda label: settings.DATA_CONFIG.original_idx_to_activity_idx_map[label]
+                
             ),  # Use `[0]` to get only one activity | maps 0, 101, 102, 103, 104, 105 to 0, 1, 2, 3, 4, 5
             subject = f"{sub}",
             recording_index=rec

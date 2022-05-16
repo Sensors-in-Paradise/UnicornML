@@ -61,13 +61,22 @@ class OpportunityConfig(DataConfig):
     def __init__(self, dataset_path: str):
         self.dataset_path = dataset_path
 
-        self.raw_label_to_activity_idx_map = {
+        self.original_idx_to_activity_idx_map = {
             0: 0,
             101: 1,
             102: 2,
             103: 3,
             104: 4,
             105: 5,
+        }
+
+        self.raw_label_to_activity_idx_map = {
+             "null": 0,
+            "relaxing": 1,
+            "coffee time": 2,
+            "early morning": 3,
+            "cleanup": 4,
+            "sandwich time": 5,
         }
 
         self.activity_idx_to_activity_name_map = {
