@@ -104,7 +104,7 @@ class OpportunityConfig(DataConfig):
 
 class SonarConfig(DataConfig):
 
-    timestep_frequency = 50 # Hz
+    timestep_frequency = 60 # Hz
 
     def __init__(self, dataset_path: str):
         self.dataset_path = dataset_path
