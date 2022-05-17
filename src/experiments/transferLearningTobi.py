@@ -17,6 +17,8 @@ from evaluation.metrics import accuracy
 from evaluation.conf_matrix import create_conf_matrix
 from loader.Preprocessor import Preprocessor
 from models.JensModel import JensModel
+from models.RainbowModel import RainbowModel
+from models.ResNetModel import ResNetModel
 from utils.filter_activities import filter_activities
 from utils.folder_operations import new_saved_experiment_folder
 from utils.DataConfig import Sonar22CategoriesConfig, OpportunityConfig
@@ -36,6 +38,8 @@ data_config = OpportunityConfig(dataset_path='/dhc/groups/bp2021ba1/data/opportu
 settings.init(data_config)
 random.seed(1678978086101)
 
+numEpochsBeforeTL = 2
+numEpochsForTL = 1
 # Load dataset
 recordings = settings.DATA_CONFIG.load_dataset()#limit=75
 
@@ -47,6 +51,7 @@ def split_list_by_people(recordings: "list[Recording]", peopleForListA: "list[st
     return np.array(list(filter(lambda recording: recording.subject in peopleForListA,recordings))), np.array(list(filter(lambda recording: recording.subject not in peopleForListA, recordings)))
 window_size = 100
 n_features = recordings[0].sensor_frame.shape[1]
+print(n_features)
 n_outputs = settings.DATA_CONFIG.n_activities()
 
 # Create Folder, save model export and evaluations there
@@ -145,7 +150,7 @@ def get_people_in_recordings(recordings: "list[Recording]") -> list[str]:
     return list(people)
 
 
-def evaluateOnRecordings(model: "JensModel",_recordings: "list[Recording]", confusionMatrixFileName=None, confusionMatrixTitle="") -> tuple[float, float,float, np.ndarray]:
+def evaluateOnRecordings(model: "RainbowModel",_recordings: "list[Recording]", confusionMatrixFileName=None, confusionMatrixTitle="") -> tuple[float, float,float, np.ndarray]:
     X_test, y_test_true = model.windowize_convert(_recordings)
     y_test_pred = model.predict(X_test)
     acc = accuracy(y_test_pred, y_test_true)
@@ -156,8 +161,8 @@ def evaluateOnRecordings(model: "JensModel",_recordings: "list[Recording]", conf
     return acc, f1_macro, f1_weighted, y_test_true
 
 def instanciateModel():
-    return JensModel(
-        n_epochs=2,
+    return ResNetModel(
+        n_epochs=numEpochsBeforeTL,
         window_size=100,
         n_features=n_features,
         n_outputs=n_outputs,
@@ -183,6 +188,7 @@ numRecordingsOfPeopleDict = count_recordings_of_people(recordings)
 minimumRecordingsPerLeftOutPerson = 1
 peopleToLeaveOutPerExpirement = list(filter(lambda person: numRecordingsOfPeopleDict[person]>minimumRecordingsPerLeftOutPerson,people)) #["anja.csv", "florian.csv", "oli.csv", "rauche.csv"]#, "oli.csv", "rauche.csv"
 
+
 k_fold_splits = 3
 result = [["fold id \ Left out person"]+[["**FOLD "+str(round(i/3))+"**", "without TL", "with TL"][i%3] for i in range(k_fold_splits*3)]+["Average without TL"]+["Average with TL"]]
 
@@ -193,6 +199,7 @@ for personIndex, personToLeaveOut in enumerate(peopleToLeaveOutPerExpirement):
     personId = people.index(personToLeaveOut)
     model = instanciateModel()
     recordingsOfLeftOutPerson, recordingsTrain = split_list_by_people(recordings, [personToLeaveOut])
+    model.n_epochs = numEpochsBeforeTL
     _, yTrainTrue = model.windowize_convert_fit(recordingsTrain)
     activityDistributionFileName = f"subject{personId}_trainActivityDistribution.png"
     save_activity_distribution_pie_chart(yTrainTrue,  activityDistributionFileName)
@@ -200,7 +207,7 @@ for personIndex, personToLeaveOut in enumerate(peopleToLeaveOutPerExpirement):
     resultCol = [f"Subject {personId}<br />Train activity distribution <br />![Base model train activity distribution]({activityDistributionFileName})"]
     resultWithoutTLVals = []
     resultWithTLVals = []
-    model.n_epochs = 1
+    model.n_epochs = numEpochsForTL
     model.model.save_weights("ckpt")
     # Evaluate on left out person
     k_fold = KFold(n_splits=k_fold_splits, random_state=None)
@@ -258,15 +265,17 @@ wholeDataSetActivityDistributionFileName = "wholeDatasetActivityDistribution.png
 _, yAll = instanciateModel().windowize_convert(recordings)
 save_activity_distribution_pie_chart(yAll,  wholeDataSetActivityDistributionFileName)
 result_md = f"# Experiment"
-result_md += f"\nDoing transfer learning only with one epoch"
-result_md += f"\n# Dataset"
-result_md += f"\n## Whole dataset distribution\n![activityDistribution]({wholeDataSetActivityDistributionFileName})"
+result_md += f"\nDoing model training with {numEpochsBeforeTL} epochs and transfer learning {numEpochsForTL} epochs"
+result_md += f"\n## Model"
+result_md += f"\n```\n{model.model.summary()}\n```"
+result_md += f"\n## Dataset"
+result_md += f"\n### Whole dataset distribution\n![activityDistribution]({wholeDataSetActivityDistributionFileName})"
 result_md += f"\nUsing dataset `{settings.DATA_CONFIG.dataset_path}`"
 activitiesPerPersonFilename = "actvitiesPerPerson.png"
 plot_activities_per_person(recordings, activitiesPerPersonFilename, "Activities per person")
-result_md = f"#\n## Activities per subject\n![activityDistribution]({activitiesPerPersonFilename})"
+result_md += f"#\n### Activities per subject\n![activityDistribution]({activitiesPerPersonFilename})"
 result_md += f"\nLeaving people out with at least  `{minimumRecordingsPerLeftOutPerson}`"
-result_md += "\n# Experiments\n"
+result_md += "\n## Experiments\n"
 for index, row in enumerate(resultT):
     for item in row:
         result_md += "|" + str(item)
@@ -275,7 +284,7 @@ for index, row in enumerate(resultT):
         for col in range(len(row)):
             result_md += "| -----------"
         result_md += "|\n"
-result_md += "\n# Summary"
+result_md += "\n## Summary"
 plt.clf()
 scatterData = np.array(TLsuccessForUniformDistributionScore)
 
