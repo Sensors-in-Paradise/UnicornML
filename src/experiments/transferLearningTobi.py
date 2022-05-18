@@ -8,7 +8,7 @@ import os
 import random
 
 import numpy as np
-from sklearn.model_selection import KFold
+from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import f1_score
 from models.RainbowModel import RainbowModel
 import pandas as pd
@@ -34,12 +34,15 @@ import matplotlib.pyplot as plt
 Number of recordings per person
 {'connie.csv': 6, 'alex.csv': 38, 'trapp.csv': 9, 'anja.csv': 13, 'aileen.csv': 52, 'florian.csv': 16, 'brueggemann.csv': 36, 'oli.csv': 20, 'rauche.csv': 9, 'b2.csv': 6, 'yvan.csv': 8, 'christine.csv': 7, 'mathias.csv': 2, 'kathi.csv': 17}
 """
-data_config = OpportunityConfig(dataset_path='/dhc/groups/bp2021ba1/data/opportunity-dataset')#Sonar22CategoriesConfig(dataset_path='/dhc/groups/bp2021ba1/data/filtered_dataset_without_null')
+
+data_config = Sonar22CategoriesConfig(dataset_path='/dhc/groups/bp2021ba1/data/filtered_dataset_without_null')#OpportunityConfig(dataset_path='/dhc/groups/bp2021ba1/data/opportunity-dataset')
 settings.init(data_config)
 random.seed(1678978086101)
 
-numEpochsBeforeTL = 2
-numEpochsForTL = 1
+k_fold_splits = 3
+numEpochsBeforeTL = 10
+numEpochsForTL = 3
+minimumRecordingsPerLeftOutPerson = 5
 # Load dataset
 recordings = settings.DATA_CONFIG.load_dataset()#limit=75
 
@@ -150,8 +153,7 @@ def get_people_in_recordings(recordings: "list[Recording]") -> list[str]:
     return list(people)
 
 
-def evaluateOnRecordings(model: "RainbowModel",_recordings: "list[Recording]", confusionMatrixFileName=None, confusionMatrixTitle="") -> tuple[float, float,float, np.ndarray]:
-    X_test, y_test_true = model.windowize_convert(_recordings)
+def evaluate(model: "RainbowModel",X_test: np.ndarray, y_test_true: np.ndarray, confusionMatrixFileName=None, confusionMatrixTitle="") -> tuple[float, float,float, np.ndarray]:
     y_test_pred = model.predict(X_test)
     acc = accuracy(y_test_pred, y_test_true)
     if confusionMatrixFileName:
@@ -185,11 +187,11 @@ def getAveragesOfAttributesInDicts(dicts: list[dict[str, float]]) -> dict[str, f
 
 people = get_people_in_recordings(recordings)
 numRecordingsOfPeopleDict = count_recordings_of_people(recordings)
-minimumRecordingsPerLeftOutPerson = 1
+
 peopleToLeaveOutPerExpirement = list(filter(lambda person: numRecordingsOfPeopleDict[person]>minimumRecordingsPerLeftOutPerson,people)) #["anja.csv", "florian.csv", "oli.csv", "rauche.csv"]#, "oli.csv", "rauche.csv"
 
 
-k_fold_splits = 3
+
 result = [["fold id \ Left out person"]+[["**FOLD "+str(round(i/3))+"**", "without TL", "with TL"][i%3] for i in range(k_fold_splits*3)]+["Average without TL"]+["Average with TL"]]
 
 TLsuccessForUniformDistributionScore = []
@@ -209,19 +211,21 @@ for personIndex, personToLeaveOut in enumerate(peopleToLeaveOutPerExpirement):
     resultWithTLVals = []
     model.n_epochs = numEpochsForTL
     model.model.save_weights("ckpt")
+
+    xLeftOutPerson, yLeftOutPerson = model.windowize_convert(recordingsOfLeftOutPerson, should_shuffle=False)
     # Evaluate on left out person
-    k_fold = KFold(n_splits=k_fold_splits, random_state=None)
-    for (index, (train_index, test_index)) in enumerate(k_fold.split(recordingsOfLeftOutPerson)):
+    k_fold = StratifiedKFold(n_splits=k_fold_splits, random_state=None)
+    for (index, (train_indices, test_indices)) in enumerate(k_fold.split(np.zeros(np.shape(yLeftOutPerson)[0]), np.argmax(yLeftOutPerson, axis=1))):
         # Restore start model state for all folds of this left out person 
         model.model.load_weights("ckpt")
 
         # Grab data for this fold
-        recordingsOfLeftOutPerson_train =  recordingsOfLeftOutPerson[train_index]
-        recordingsOfLeftOutPerson_test = recordingsOfLeftOutPerson[test_index]
+        xTrainLeftOutPerson, yTrainLeftOutPerson =  xLeftOutPerson[train_indices], yLeftOutPerson[train_indices]
+        xTestLeftOutPerson, yTestLeftOutPerson = xLeftOutPerson[test_indices], yLeftOutPerson[test_indices]
 
         # Evaluate without transfer learning
         confMatrixWithoutTLFileName = f"subject{personId}_kfold{index}_withoutTL_conf_matrix"
-        accuracyWithoutTransferLearning, f1ScoreMacroWithoutTransferLearning,f1ScoreWeightedWithoutTransferLearning, yTestTrue = evaluateOnRecordings(model, recordingsOfLeftOutPerson_test, confMatrixWithoutTLFileName, f"w/o TL, validated on subject {personId}, fold {index}")
+        accuracyWithoutTransferLearning, f1ScoreMacroWithoutTransferLearning,f1ScoreWeightedWithoutTransferLearning, yTestTrue = evaluate(model, xTestLeftOutPerson, yTestLeftOutPerson, confMatrixWithoutTLFileName, f"w/o TL, validated on subject {personId}, fold {index}")
         print(f"Accuracy on test data of left out person {accuracyWithoutTransferLearning}")
 
         # Store test distribution for this fold
@@ -230,18 +234,18 @@ for personIndex, personToLeaveOut in enumerate(peopleToLeaveOutPerExpirement):
         
         # Do transfer learning
         freezeDenseLayers(model)
-        _, yTrainTrue = model.windowize_convert_fit(recordingsOfLeftOutPerson_train)
+        model.fit(xTrainLeftOutPerson, yTrainLeftOutPerson)
 
         # Store TL train distribution
         tlActivityDistributionFileName =  f"subject{personId}_kfold{index}_TL_trainActivityDistribution.png"
-        save_activity_distribution_pie_chart(yTrainTrue,  tlActivityDistributionFileName, title="TL Train distribution", subtitle=f"Activities of subject {personId} used for transfer learning in fold {index}")
+        save_activity_distribution_pie_chart(yTrainLeftOutPerson,  tlActivityDistributionFileName, title="TL Train distribution", subtitle=f"Activities of subject {personId} used for transfer learning in fold {index}")
 
         # Store TL train evaluation
         confMatrixWithTLFileName = f"subject{personId}_kfold{index}_withTL_conf_matrix"
-        accuracyWithTransferLearning, f1ScoreMacroWithTransferLearning, f1ScoreWeightedWithTransferLearning, _ = evaluateOnRecordings(model, recordingsOfLeftOutPerson_test, confMatrixWithTLFileName, f"With TL, validated on subject {personId}, fold {index}")
+        accuracyWithTransferLearning, f1ScoreMacroWithTransferLearning, f1ScoreWeightedWithTransferLearning, _ = evaluate(model, xTestLeftOutPerson, yTestLeftOutPerson, confMatrixWithTLFileName, f"With TL, validated on subject {personId}, fold {index}")
         print(f"Accuracy on test data of left out person {accuracyWithTransferLearning}")
 
-        TLsuccessForUniformDistributionScore.append((getMeanCountDifferenceFromMeanActivityCount(yTrainTrue),accuracyWithTransferLearning-accuracyWithoutTransferLearning))
+        TLsuccessForUniformDistributionScore.append((getMeanCountDifferenceFromMeanActivityCount(yTrainLeftOutPerson),accuracyWithTransferLearning-accuracyWithoutTransferLearning))
         # Append report
         resultCol.append("Test Activity Distribution "+f"<br />![Test activity distribution]({activityDistributionTestFileName})")
         resultCol.append("Accuracy: "+str(accuracyWithoutTransferLearning)+f"<br />F1-Score Macro: {f1ScoreMacroWithoutTransferLearning}<br />F1-Score Weighted: {f1ScoreWeightedWithoutTransferLearning}<br />![confusion matrix]({confMatrixWithoutTLFileName}.png)")
@@ -265,15 +269,21 @@ wholeDataSetActivityDistributionFileName = "wholeDatasetActivityDistribution.png
 _, yAll = instanciateModel().windowize_convert(recordings)
 save_activity_distribution_pie_chart(yAll,  wholeDataSetActivityDistributionFileName)
 result_md = f"# Experiment"
-result_md += f"\nDoing model training with {numEpochsBeforeTL} epochs and transfer learning {numEpochsForTL} epochs"
+result_md += f"\nDoing model training with {numEpochsBeforeTL} epochs and transfer learning {numEpochsForTL} with epochs"
+result_md += f"\nUsing stratified kfolds for left out person"
 result_md += f"\n## Model"
-result_md += f"\n```\n{model.model.summary()}\n```"
+result_md += f"\n```\n"
+def append_line(line):
+    global result_md
+    result_md += line + "\n"
+instanciateModel().model.summary(print_fn=append_line)
+result_md += f"```"
 result_md += f"\n## Dataset"
 result_md += f"\n### Whole dataset distribution\n![activityDistribution]({wholeDataSetActivityDistributionFileName})"
 result_md += f"\nUsing dataset `{settings.DATA_CONFIG.dataset_path}`"
 activitiesPerPersonFilename = "actvitiesPerPerson.png"
 plot_activities_per_person(recordings, activitiesPerPersonFilename, "Activities per person")
-result_md += f"#\n### Activities per subject\n![activityDistribution]({activitiesPerPersonFilename})"
+result_md += f"\n### Activities per subject\n![activityDistribution]({activitiesPerPersonFilename})"
 result_md += f"\nLeaving people out with at least  `{minimumRecordingsPerLeftOutPerson}`"
 result_md += "\n## Experiments\n"
 for index, row in enumerate(resultT):
@@ -287,7 +297,6 @@ for index, row in enumerate(resultT):
 result_md += "\n## Summary"
 plt.clf()
 scatterData = np.array(TLsuccessForUniformDistributionScore)
-
 plt.scatter(scatterData[:,0], scatterData[:,1])
 plt.title("TL effects according to uniformity of training data distribution") 
 plt.xlabel("Mean activity duration difference from mean activity duration") 

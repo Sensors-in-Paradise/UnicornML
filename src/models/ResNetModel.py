@@ -61,6 +61,7 @@ class ResNetModel(RainbowModel):
         print(
             f"Building model for {self.window_size} timesteps (window_size) and {kwargs['n_features']} features"
         )
+        self.callbacks.append(keras.callbacks.ReduceLROnPlateau(monitor='loss', factor=0.5, patience=50, min_lr=0.0001))
 
     def _create_model(self, n_features, n_outputs):
         n_feature_maps = 64
@@ -136,12 +137,6 @@ class ResNetModel(RainbowModel):
 
         model.compile(loss='categorical_crossentropy', optimizer=keras.optimizers.Adam(),
                       metrics=['accuracy'])
-
-        reduce_lr = keras.callbacks.ReduceLROnPlateau(monitor='loss', factor=0.5, patience=50, min_lr=0.0001)
-
-        
-
-        self.callbacks = [reduce_lr]
 
         return model
 
@@ -261,3 +256,4 @@ class ResNetModel(RainbowModel):
     def convert(self, windows: "list[Window]") -> "tuple[np.ndarray, np.ndarray]":
         X_train, y_train = super().convert(windows)
         return X_train, y_train# np.expand_dims(X_train, -1)
+

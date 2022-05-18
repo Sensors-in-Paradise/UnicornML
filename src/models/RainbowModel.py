@@ -1,5 +1,6 @@
 # pylint: disable=locally-disabled, multiple-statements, fixme, line-too-long, no-name-in-module, unused_import, wrong-import-order, bad-option-value
 
+from gc import callbacks
 import os
 from abc import ABC, abstractmethod
 from random import shuffle
@@ -33,7 +34,7 @@ class RainbowModel(ABC):
     verbose: Union[int, None] = None
     n_epochs: Union[int, None] = None
     kwargs = None
-
+    callbacks = []
     @abstractmethod
     def __init__(self, **kwargs):
         """
@@ -63,18 +64,17 @@ class RainbowModel(ABC):
     # Preprocess ----------------------------------------------------------------------
 
     def windowize_convert(
-        self, recordings_train: "list[Recording]"
+        self, recordings_train: "list[Recording]", should_shuffle=True
     ) -> "tuple[np.ndarray,np.ndarray]":
         """
         shuffles the windows
         """
         windows_train = self.windowize(recordings_train)
-        shuffle(
-            windows_train
-        )  # many running windows in a row?, one batch too homogenous?, lets shuffle
+        if should_shuffle:
+            shuffle(
+                windows_train
+            )  # many running windows in a row?, one batch too homogenous?, lets shuffle
         X_train, y_train = self.convert(windows_train)
-        unique, counts = np.unique(y_train, return_counts=True)
-        countsDict = dict(zip([settings.DATA_CONFIG.activity_idx_to_activity_name_map[item] for item in unique], counts))
         return X_train, y_train
 
     def windowize(self, recordings: "list[Recording]") -> "list[Window]":
@@ -147,6 +147,7 @@ class RainbowModel(ABC):
             batch_size=self.batch_size,
             verbose=self.verbose,
             class_weight=self.class_weight,
+            callbacks= callbacks
         )
         self.history = history
 
