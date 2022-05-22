@@ -1,5 +1,12 @@
 import numpy as np
 
+def relabel_by_threshold_with_recording_context(original_prediction_list, threshold, relabel_func):
+    relabeled_prediction_list = []
+    for original_predictions in original_prediction_list:
+        relabeled_prediction_list += relabel_by_threshold(original_predictions, threshold, relabel_func)
+    return [item for sublist in relabeled_prediction_list for item in sublist] # flattened by one dimension, since we don't need the recording context anymore after that step
+    
+
 def relabel_by_threshold(original_predictions, threshold, relabel_func):
     def erase_labels_under_threshold(y_test_pred):
         if max(y_test_pred) >= threshold:

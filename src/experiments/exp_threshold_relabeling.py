@@ -15,7 +15,7 @@ from utils.array_operations import split_list_by_percentage
 from utils.folder_operations import new_saved_experiment_folder
 from evaluation.conf_matrix import create_conf_matrix
 from evaluation.text_metrics import append_text_metrics_for_threshold_accuracy, create_text_metrics, append_text_metrics_for_threshold_accuracy_and_relabeling_func
-from evaluation.metrics import accuracy, f1_score, accuracy_threshold
+from evaluation.metrics import accuracy, f1_score, accuracy_threshold, accuracy_with_recording_context
 from utils.Windowizer import Windowizer
 from sklearn.model_selection import KFold
 from utils.Converter import Converter
@@ -27,7 +27,7 @@ from models.OldLSTM import OldLSTM
 from models.SenselessDeepConvLSTM import SenselessDeepConvLSTM
 from models.LeanderDeepConvLSTM import LeanderDeepConvLSTM
 from utils.DataConfig import OpportunityConfig
-from utils.threshold_relabeling import relabel_by_threshold, relabel_feed_forward, relabel_feed_backwards, relabel_by_confidence_interpolation
+from utils.threshold_relabeling import relabel_by_threshold, relabel_feed_forward, relabel_feed_backwards, relabel_by_confidence_interpolation, relabel_by_threshold_with_recording_context
 
 
 experiment_name = "opportunity_template_exp"
@@ -72,7 +72,9 @@ preprocess = lambda recordings: Preprocessor().jens_preprocess_with_normalize(
 windowize = lambda recordings: Windowizer(window_size=window_size).jens_windowize(
     recordings
 )
+windowize_with_recording_context: lambda recordings: Windowizer(window_size=window_size).jens_windowize_with_recording_context(recordings)
 convert = lambda windows: Converter(n_classes=n_classes).sonar_convert(windows)
+convert_with_recording_context = lambda window_list: Converter(n_classes).sonar_convert_with_context(window_list)
 flatten = lambda tuple_list: [item for sublist in tuple_list for item in sublist]
 test_train_split = lambda recordings: leave_person_out_split(test_person_idx=2)(
     recordings
@@ -91,15 +93,15 @@ recordings = preprocess(recordings)
 # Test Train Split
 recordings_train, recordings_test = test_train_split(recordings)
 
-# Windowize
-windows_train, windows_test = windowize(recordings_train), windowize(recordings_test)
+# Windowize, but keep context for test data batch
+windows_train = windowize(recordings_train)
+windows_test = windowize_with_recording_context(windowize_with_recording_context)
 
 # Convert
-X_train, y_train, X_test, y_test = tuple(
-    flatten(map(convert, [windows_train, windows_test]))
-)
+X_train, y_train = convert(windows_train)
+X_test, y_test = convert_with_recording_context(windows_test)
 
-# or JensModel
+
 model = LeanderDeepConvLSTM(
     window_size=window_size,
     n_features=recordings[0].sensor_frame.shape[1],
@@ -111,21 +113,21 @@ model = LeanderDeepConvLSTM(
 
 model.fit(X_train, y_train)
 
-y_test_pred = model.predict(X_test)
+y_test_pred = model.predict_with_recording_context(X_test)
 
 # Create Folder, save model export and evaluations there
 experiment_folder_path = new_saved_experiment_folder(
     experiment_name
 )  # create folder to store results
 create_text_metrics(
-    experiment_folder_path, y_test_pred, y_test, [accuracy]
+    experiment_folder_path, y_test_pred, y_test, [accuracy_with_recording_context]
 )  
 
 thresholds = [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]
 relabeling_funcs = [relabel_feed_forward, relabel_feed_backwards, relabel_by_confidence_interpolation]
 for threshold in thresholds:
     for relabeling_func in relabeling_funcs:
-        y_test_pred_new = relabel_by_threshold(y_test_pred, threshold, relabeling_func)
+        y_test_pred_new = relabel_by_threshold_with_recording_context(y_test_pred, threshold, relabeling_func)
         append_text_metrics_for_threshold_accuracy_and_relabeling_func(
             experiment_folder_path, y_test_pred_new, y_test, threshold, relabeling_func
         )  

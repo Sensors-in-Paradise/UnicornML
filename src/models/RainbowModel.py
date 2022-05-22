@@ -148,6 +148,12 @@ class RainbowModel(ABC):
         gets a list of windows and returns a list of prediction_vectors
         """
         return self.model.predict(X_test)
+    
+    def predict_with_recording_context(self, X_test_list: np.ndarray) -> np.ndarray:
+        predictions = []
+        for X_test in X_test_list:
+            predictions += self.model.predict(X_test)
+        return predictions
 
     def export(self, path: str) -> None:
         """

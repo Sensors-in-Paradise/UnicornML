@@ -25,6 +25,17 @@ def accuracy(prediction_vectors: np.ndarray, y_test: np.ndarray, verbose: int = 
         print(f"accuracy: {accuracy}")
     return accuracy
 
+def accuracy_with_recording_context(prediction_vectors: np.ndarray, y_test: np.ndarray, verbose: int = 0) -> float:
+    prediction_length = 0 
+    correct_preds = 0
+    for idx, prediction_array in enumerate(prediction_vectors):
+        predictions = np.argmax(prediction_array, axis=1)
+        y_test_pred = np.argmax(y_test[idx], axis=1)
+        prediction_length += len(prediction_array)
+        correct_preds += np.sum(predictions == y_test_pred) 
+    return (correct_preds / prediction_length)
+        
+
 def accuracy_threshold(prediction_vectors: np.ndarray, y_test: np.ndarray, threshold: float, verbose: int = 0) -> float:
 
     total_predictions = 0
