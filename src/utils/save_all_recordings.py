@@ -63,7 +63,7 @@ def load_all_recordings(path_to_load: str) -> 'list[Recording]':
         sensor_frame = recording_dataframe.loc[:, recording_dataframe.columns.difference(
             ['SampleTimeFine', 'subject', 'activity', 'rec_index'])]
 
-        recordings.append(Recording(sensor_frame, time_frame, activities, subject))
+        recordings.append(Recording( time_frame, activities, subject,sensor_frame))
 
     print(f'Loaded {len(recordings)} recordings from {path_to_load}')
     return recordings

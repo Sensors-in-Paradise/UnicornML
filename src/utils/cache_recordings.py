@@ -48,7 +48,7 @@ def load_recordings(path: str, activityLabelToIndexMap: dict, limit: int = None)
             recording_dataframe.columns.difference(['SampleTimeFine', 'activity'])]
         subject = file.split('_')[1]
 
-        recordings.append(Recording(sensor_frame, time_frame, activities, subject, index))
+        recordings.append(Recording( time_frame, activities, subject, index,sensor_frame))
 
     print(f'Loaded {len(recordings)} recordings from {path}')
     
