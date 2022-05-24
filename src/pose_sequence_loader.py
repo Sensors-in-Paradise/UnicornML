@@ -13,6 +13,7 @@ def getPoseFilesWithMetadata(dataset_path: str, activity_mapping = None):
     from utils.file_functions import get_subfolder_names
     import json
     import os
+    import pandas as pd
 
     recording_folder_names = get_subfolder_names(dataset_path)
     recording_folder_names = [
@@ -27,9 +28,14 @@ def getPoseFilesWithMetadata(dataset_path: str, activity_mapping = None):
                 pose_file_name = os.path.join(recording_folder_path, file_name)
             if is_file and file_name.endswith("metadata.json"):
                 metadata_file_name = os.path.join(recording_folder_path, file_name)
-            if 
+            if is_file and file_name.endswith(".csv") and not file_name.endswith("poseSequence.csv")
+                sensor_file_name = os.path.join(recording_folder_path, file_name)
 
         try:
+            sensor_frame = pd.read_csv(
+                sensor_file_name, skiprows=8
+            )
+
             with open(metadata_file_name) as metadata_file:
                 metadata = json.load(metadata_file)
             
@@ -43,8 +49,14 @@ def getPoseFilesWithMetadata(dataset_path: str, activity_mapping = None):
                     lambda activity: -1 if activity not in activity_mapping.keys() else activity_mapping[activity],
                     activities
                 ))
-            
-            pose_file_metadata_tuples.append((pose_file_name, activities, metadata["startTimestamp"]))
+            metadata = {
+                "activities": activities,
+                "startTimestamp": metadata["startTimeStamp"],
+                "subject": metadata["person"],
+                "numLines": sensor_frame.shape[0],
+
+            }
+            pose_file_metadata_tuples.append((pose_file_name, metadata))
         except:
             raise Exception(f"Recording with missing metadata or poseSequence found: {recording_folder_path}")
     return pose_file_metadata_tuples
