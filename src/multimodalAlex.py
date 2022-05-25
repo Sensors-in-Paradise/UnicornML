@@ -1,6 +1,7 @@
 from fileinput import filename
 import os
 import random
+from alex.UnicornML.src.models import ResNetModel_Multimodal
 
 import numpy as np
 from sklearn.model_selection import StratifiedKFold
@@ -60,6 +61,13 @@ pool.join()
 for i, pose_frame in enumerate(pose_frames):
     recordings[i].pose_frame = pose_frame
 
+initialLength = len(recordings)
+recordings = list(filter(
+    lambda recording: not recording.pose_frame.empty, 
+    recordings
+))
+print(f"Filtered out {initialLength - len(recordings)} Recordings (!)")
+
 print("==> APPENDING POSE FRAMES DONE")
 
 
@@ -68,11 +76,42 @@ def split_list_by_people(recordings: "list[Recording]", peopleForListA: "list[st
     """ Splits the recordings into a tuple of a sublist of recordings of people in peopleForListA and the recordings of other people"""
     return np.array(list(filter(lambda recording: recording.subject in peopleForListA,recordings))), np.array(list(filter(lambda recording: recording.subject not in peopleForListA, recordings)))
 window_size = 100
-n_features = recordings[0].sensor_frame.shape[1]
-print(n_features)
+n_sensor_features = recordings[0].sensor_frame.shape[1]
+n_pose_features = recordings[0].pose_frame.shape[1]
+print(f"Sensor features: {n_sensor_features},  Pose features: {n_pose_features}")
 n_outputs = settings.DATA_CONFIG.n_activities()
 
 # Create Folder, save model export and evaluations there
 experiment_folder_path = new_saved_experiment_folder(
-    "transferLearningTobi"
+    "multimodalAlex"
 )
+
+
+def evaluate(model: "ResNetModel_Multimodal",X_test: np.ndarray, y_test_true: np.ndarray, confusionMatrixFileName=None, confusionMatrixTitle="") -> tuple[float, float,float, np.ndarray]:
+    y_test_pred = model.predict(X_test)
+    acc = accuracy(y_test_pred, y_test_true)
+    if confusionMatrixFileName:
+        create_conf_matrix(experiment_folder_path, y_test_pred, y_test_true, file_name = confusionMatrixFileName, title=confusionMatrixTitle+", acc:"+str(int(acc*10000)/100)+"%") 
+    f1_macro = f1_score(np.argmax(y_test_true, axis=1), np.argmax(y_test_pred, axis=1), average="macro")   
+    f1_weighted = f1_score(np.argmax(y_test_true, axis=1), np.argmax(y_test_pred, axis=1), average="weighted")    
+    return acc, f1_macro, f1_weighted, y_test_true
+
+def instanciateModel(use_sensor_frame = True, use_pose_frame = False):
+    n_features = 0
+    n_features += n_sensor_features if (use_sensor_frame) else 0
+    n_features += n_pose_features if (use_pose_frame) else 0
+
+    return ResNetModel_Multimodal(
+        n_epochs=numEpochsBeforeTL,
+        window_size=100,
+        n_features=n_features,
+        n_outputs=n_outputs,
+        batch_size=64,
+        use_sensor_frame=use_sensor_frame,
+        use_pose_frame=use_pose_frame
+    )
+
+model = instanciateModel(True, False)
+model = instanciateModel(True, True)
+model = instanciateModel(False, True)
+

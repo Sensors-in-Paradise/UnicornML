@@ -6,7 +6,7 @@ from utils.typing import assert_type
 
 @dataclass
 class Window:
-    sensor_array: np.ndarray
+    data_array: np.ndarray
     activity: int
     subject: str
     recording_index: int
@@ -15,7 +15,7 @@ class Window:
         assert_type(
             [(sensor_array, (np.ndarray, np.generic)), (activity, int), (subject, str), (recording_index, int)]
         )
-        self.sensor_array = sensor_array
+        self.data_array = sensor_array
         self.activity = activity
         self.subject = subject
         self.recording_index = recording_index
