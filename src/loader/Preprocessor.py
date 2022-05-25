@@ -99,7 +99,7 @@ class Preprocessor:
 
         return recordings
     
-    def _normalize(self, recordings: list[Recording], scaler_fn):
+    def _normalize(self, recordings: 'list[Recording]', scaler_fn):
         """
         Normalizes the sensor values with the given scaler
         """
