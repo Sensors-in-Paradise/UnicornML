@@ -50,9 +50,9 @@ class JensModel(RainbowModel):
         self.n_epochs = kwargs.get("n_epochs") or 10
         self.learning_rate = kwargs.get("learning_rate") or 0.001
         self.model_name = "jens_model"
-
+        self.n_features = kwargs["n_features"]
         # create model
-        self.model = self._create_model(kwargs["n_features"], kwargs["n_outputs"])
+        self.model = self._create_model(self.n_features, kwargs["n_outputs"])
         # Refactoring idea:
         # n_features of a neuronal net is the number of inputs, so in reality n_features = window_size * n_features
         # we could have another name for that

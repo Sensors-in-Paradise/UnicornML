@@ -19,7 +19,7 @@ from utils.folder_operations import create_folders_in_path
 from utils.typing import assert_type
 
 
-class RainbowModel(ABC):
+class RainbowModel(tf.Module):
 
     # general
     model_name = None
@@ -29,10 +29,12 @@ class RainbowModel(ABC):
     stride_size: Union[int, None] = None
     class_weight = None
 
-    model: Any = None
+    model: Union[tf.keras.Model, None] = None
     batch_size: Union[int, None] = None
     verbose: Union[int, None] = None
     n_epochs: Union[int, None] = None
+    n_features: Union[int, None] = None
+    n_outputs: Union[int, None] = None
     kwargs = None
     callbacks = []
     @abstractmethod
@@ -126,6 +128,26 @@ class RainbowModel(ABC):
 
         return np.array(sensor_arrays), np.array(activity_vectors)
 
+    # The 'train' function takes an input window and a label
+    @tf.function(input_signature=[
+        tf.TensorSpec(shape=[None, window_size, n_features], dtype=tf.float32),
+        tf.TensorSpec(shape=[None, n_outputs], dtype=tf.float32),  # Binary Classification
+    ])
+    def train(self, input_window, label):
+        print("input_window", input_window)
+        print("label", label)
+        #assert (self.model.loss == "categorical_crossentropy")
+
+        with tf.GradientTape() as tape:
+            predictions = self.model(input_window)
+            print(self.model)
+            loss = self.model.loss(label, predictions)
+        gradients = tape.gradient(loss, self.model.trainable_variables)
+        self.model.optimizer.apply_gradients(
+            zip(gradients, self.model.trainable_variables))
+        result = {"loss": loss}
+        return result
+    
     # Fit ----------------------------------------------------------------------
 
     def fit(self, X_train: np.ndarray, y_train: np.ndarray) -> None:
@@ -152,7 +174,16 @@ class RainbowModel(ABC):
         self.history = history
 
     # Predict ------------------------------------------------------------------------
-
+    @tf.function(input_signature=[
+        tf.TensorSpec(shape=[None, window_size, n_features], dtype=tf.float32),
+    ])
+    def infer(self, input_window):
+        logits = self.model(input_window)
+        probabilities = tf.nn.softmax(logits, axis=-1)
+        return {
+            "output": probabilities,
+            "logits": logits,
+        }
     def predict(self, X_test: np.ndarray) -> np.ndarray:
         """
         gets a list of windows and returns a list of prediction_vectors
@@ -171,13 +202,22 @@ class RainbowModel(ABC):
         create_folders_in_path(export_path_raw_model)
 
         # 1/3 Export raw model ------------------------------------------------------------
-        self.model.save(export_path_raw_model)
+        tf.saved_model.save(self.model,export_path_raw_model,  signatures={
+            'train':
+                self.train.get_concrete_function(),
+            'infer':
+                self.infer.get_concrete_function(),
+            'save':
+                self.save.get_concrete_function(),
+            'restore':
+                self.restore.get_concrete_function(),
+        })
 
         # 2/3 Export .h5 model ------------------------------------------------------------
-        self.model.save(export_path + "/" + self.model_name + ".h5", save_format="h5")
+        # self.model.save(export_path + "/" + self.model_name + ".h5", save_format="h5")
 
         # 3/3 Export .h5 model ------------------------------------------------------------
-        converter = tf.lite.TFLiteConverter.from_keras_model(self.model)
+        converter = tf.lite.TFLiteConverter.from_saved_model(export_path_raw_model)
 
         converter.optimizations = [
             tf.lite.Optimize.DEFAULT
@@ -187,9 +227,31 @@ class RainbowModel(ABC):
             tf.lite.OpsSet.TFLITE_BUILTINS,
             tf.lite.OpsSet.SELECT_TF_OPS,
         ]
-
+        converter.experimental_enable_resource_variables = True
         tflite_model = converter.convert()
-        with open(f"{export_path}/{self.model_name}.tflite", "wb") as f:
+        with open(os.path.join(export_path,f"{self.model_name}.tflite"), "wb") as f:
             f.write(tflite_model)
 
         print("Export finished")
+
+    @tf.function(input_signature=[tf.TensorSpec(shape=[], dtype=tf.string)])
+    def restore(self, checkpoint_path):
+        restored_tensors = {}
+        for var in self.model.weights:
+            restored = tf.raw_ops.Restore(
+                file_pattern=checkpoint_path, tensor_name=var.name, dt=var.dtype,
+                name='restore')
+            var.assign(restored)
+            restored_tensors[var.name] = restored
+        return restored_tensors
+
+    @tf.function(input_signature=[tf.TensorSpec(shape=[], dtype=tf.string)])
+    def save(self, checkpoint_path):
+        tensor_names = [weight.name for weight in self.model.weights]
+        tensors_to_save = [weight.read_value() for weight in self.model.weights]
+        tf.raw_ops.Save(
+            filename=checkpoint_path, tensor_names=tensor_names,
+            data=tensors_to_save, name='save')
+        return {
+            "checkpoint_path": checkpoint_path,
+        }

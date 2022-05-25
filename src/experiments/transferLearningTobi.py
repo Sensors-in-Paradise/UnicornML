@@ -35,14 +35,14 @@ Number of recordings per person
 {'connie.csv': 6, 'alex.csv': 38, 'trapp.csv': 9, 'anja.csv': 13, 'aileen.csv': 52, 'florian.csv': 16, 'brueggemann.csv': 36, 'oli.csv': 20, 'rauche.csv': 9, 'b2.csv': 6, 'yvan.csv': 8, 'christine.csv': 7, 'mathias.csv': 2, 'kathi.csv': 17}
 """
 
-data_config = Sonar22CategoriesConfig(dataset_path='/dhc/groups/bp2021ba1/data/filtered_dataset_without_null')#OpportunityConfig(dataset_path='/dhc/groups/bp2021ba1/data/opportunity-dataset')
+data_config = OpportunityConfig(dataset_path='/dhc/groups/bp2021ba1/data/opportunity-dataset')#Sonar22CategoriesConfig(dataset_path='/dhc/groups/bp2021ba1/data/filtered_dataset_without_null')#
 settings.init(data_config)
 random.seed(1678978086101)
 
-k_fold_splits = 3
-numEpochsBeforeTL = 10
+k_fold_splits = 2
+numEpochsBeforeTL = 1
 numEpochsForTL = 3
-minimumRecordingsPerLeftOutPerson = 5
+minimumRecordingsPerLeftOutPerson = 1
 # Load dataset
 recordings = settings.DATA_CONFIG.load_dataset()#limit=75
 
@@ -185,6 +185,8 @@ def getAveragesOfAttributesInDicts(dicts: list[dict[str, float]]) -> dict[str, f
                 result[key] = d[key] / len(dicts)
     return result
 
+
+
 people = get_people_in_recordings(recordings)
 numRecordingsOfPeopleDict = count_recordings_of_people(recordings)
 
@@ -308,6 +310,4 @@ result_md += f"\n# ![TL effects according to uniformity of training data distrib
 with open(os.path.join(experiment_folder_path, "results.md"), "w+") as f:
     f.writelines(result_md)
 
-
-
-
+model.export(os.path.join(experiment_folder_path, "model"))
