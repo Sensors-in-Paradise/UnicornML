@@ -3,6 +3,7 @@
 
 from models.RainbowModel import RainbowModel
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import h5py
@@ -33,7 +34,7 @@ from utils.Recording import Recording
 import itertools
 
 
-class ResNetModel(RainbowModel):
+class ResNetModelMultimodal(RainbowModel):
     def __init__(self, **kwargs):
         """
 
@@ -47,11 +48,11 @@ class ResNetModel(RainbowModel):
         # hyper params to instance vars
         super().__init__(**kwargs)
         self.window_size = kwargs["window_size"]
-        self.verbose = kwargs.get("verbose") or True
+        self.verbose = kwargs.get("verbose")
         self.n_epochs = kwargs.get("n_epochs") or 10
         self.learning_rate = kwargs.get("learning_rate") or 0.001
-        self.use_sensor_frame = kwargs.get("use_sensor_frame") or True
-        self.use_pose_frame = kwargs.get("use_pose_frame") or True
+        self.use_sensor_frame = kwargs.get("use_sensor_frame")
+        self.use_pose_frame = kwargs.get("use_pose_frame")
         self.model_name = "resnet_model_multimodal"
 
         # create model
@@ -59,7 +60,6 @@ class ResNetModel(RainbowModel):
         # Refactoring idea:
         # n_features of a neuronal net is the number of inputs, so in reality n_features = window_size * n_features
         # we could have another name for that
-        
         print(
             f"Building model for {self.window_size} timesteps (window_size) and {kwargs['n_features']} features"
         )
@@ -144,16 +144,26 @@ class ResNetModel(RainbowModel):
 
     def _windowize_recording(self, recording: "Recording") -> "list[Window]":
         windows = []
-        recording_sensor_array = (
-            recording.sensor_frame.to_numpy()
-        )  # recording_sensor_array[timeaxis/row, sensoraxis/column]
+
+        if self.use_sensor_frame and self.use_pose_frame:
+            assert recording.sensor_frame.shape[0] == recording.pose_frame.shape[0] , "sensor_frame and pose_frame have to have the same length" 
+            recording_data_array = pd.concat([recording.sensor_frame, recording.pose_frame], axis=1)
+        elif self.use_sensor_frame:
+            recording_data_array = recording.sensor_frame
+        elif self.use_pose_frame:
+            recording_data_array = recording.pose_frame
+        else:
+            raise Exception("Neither sensor nor pose frame selected.")
+
+        recording_data_array = recording_data_array.to_numpy() # recording_sensor_array[timeaxis/row, sensoraxis/column]
+        
         activities = recording.activities.to_numpy()
 
         start = 0
         end = 0
 
         def last_start_stamp_not_reached(start):
-            return start + self.window_size - 1 < len(recording_sensor_array)
+            return start + self.window_size - 1 < len(recording_data_array)
 
         while last_start_stamp_not_reached(start):
             end = start + self.window_size - 1
@@ -162,7 +172,7 @@ class ResNetModel(RainbowModel):
             if (
                 len(set(activities[start : (end + 1)])) == 1
             ):  # its important that the window is small (otherwise can change back and forth) # activities[start] == activities[end] a lot faster probably
-                window_sensor_array = recording_sensor_array[
+                window_data_array = recording_data_array[
                     start : (end + 1), :
                 ]  # data[timeaxis/row, featureaxis/column] data[1, 2] gives specific value, a:b gives you an interval
                 activity = activities[start]  # the first data point is enough
@@ -170,7 +180,7 @@ class ResNetModel(RainbowModel):
                     self.window_size // 2
                 )  # 50% overlap!!!!!!!!! - important for the waste calculation
                 windows.append(
-                    Window(window_sensor_array, int(activity), recording.subject, recording.recording_index)
+                    Window(window_data_array, int(activity), recording.subject, recording.recording_index)
                 )
 
             # if the frame contains different activities or from different objects, find the next start point
@@ -214,7 +224,7 @@ class ResNetModel(RainbowModel):
             return n_wasted_timesteps
 
         def to_hours_str(n_timesteps) -> int:
-            hz = 30
+            hz = 60
             minutes = (n_timesteps / hz) / 60
             hours = int(minutes / 60)
             minutes_remaining = int(minutes % 60)

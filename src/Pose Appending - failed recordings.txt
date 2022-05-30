@@ -1,0 +1,112 @@
+/dhc/groups/bp2021ba1/data/lab_data/1652085453257/poseSequence.csv
+Pose Frame added to Recording 1/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651673896419/poseSequence.csv
+Pose Frame added to Recording 2/51  
+/dhc/groups/bp2021ba1/data/lab_data/1652878074983/poseSequence.csv
+Pose Frame added to Recording 3/51  
+Recording Metadata Corrupt: 1652429334344 or only ONE activity. Returning empty pose frame (!)
+Pose Frame added to Recording 4/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651566794296/poseSequence.csv
+Pose Frame added to Recording 5/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653467107120/poseSequence.csv
+Pose Frame added to Recording 6/51  
+/dhc/groups/bp2021ba1/data/lab_data/1652086187708/poseSequence.csv
+Pose Frame added to Recording 7/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651225541980/poseSequence.csv
+Pose Frame added to Recording 8/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651152283882/poseSequence.csv
+Pose Frame added to Recording 9/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653481329073/poseSequence.csv
+Pose Frame added to Recording 10/51  
+/dhc/groups/bp2021ba1/data/lab_data/1652869027863/poseSequence.csv
+Pose Frame added to Recording 11/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651674660480/poseSequence.csv
+Frame: 184337       >            Pose: 39240
+essen reichen, dokumentation         medikamente geben, getränk geben
+Pose Frame added to Recording 12/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653480087545/poseSequence.csv
+Frame: 249038       >            Pose: 34228
+bett machen, aufräumen         bett machen, bett machen
+Pose Frame added to Recording 13/51  
+Recording Metadata Corrupt: 1651674075450 or only ONE activity. Returning empty pose frame (!)
+Pose Frame added to Recording 14/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653471714380/poseSequence.csv
+Pose Frame added to Recording 15/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651154555588/poseSequence.csv
+Pose Frame added to Recording 16/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651147138832/poseSequence.csv
+Pose Frame added to Recording 17/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653465446990/poseSequence.csv
+Pose Frame added to Recording 18/51  
+/dhc/groups/bp2021ba1/data/lab_data/1652428200498/poseSequence.csv
+Frame: 42518       >            Pose: 4636
+bett machen, umkleiden         bett machen, patient umlagern (lagerung)
+Pose Frame added to Recording 19/51  
+/dhc/groups/bp2021ba1/data/lab_data/1652868344398/poseSequence.csv
+Pose Frame added to Recording 20/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653479496235/poseSequence.csv
+Pose Frame added to Recording 21/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653484242836/poseSequence.csv
+Pose Frame added to Recording 22/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651065958950/poseSequence.csv
+Pose Frame added to Recording 23/51  
+/dhc/groups/bp2021ba1/data/lab_data/1652869322733/poseSequence.csv
+Pose Frame added to Recording 24/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653485032057/poseSequence.csv
+Frame: 687964       >            Pose: 22277
+essen reichen, aufwischen (staub)         patient umlagern (lagerung), essen reichen
+Pose Frame added to Recording 25/51  
+/dhc/groups/bp2021ba1/data/lab_data/1652102976810/poseSequence.csv
+Pose Frame added to Recording 26/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653470380045/poseSequence.csv
+Pose Frame added to Recording 27/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651221686939/poseSequence.csv
+Pose Frame added to Recording 28/51  
+Recording Metadata Corrupt: 1651149389351 or only ONE activity. Returning empty pose frame (!)
+Pose Frame added to Recording 29/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651139232298/poseSequence.csv
+Pose Frame added to Recording 30/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653468003340/poseSequence.csv
+Pose Frame added to Recording 31/51  
+/dhc/groups/bp2021ba1/data/lab_data/1652710416778/poseSequence.csv
+Pose Frame added to Recording 32/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651152887499/poseSequence.csv
+Frame: 85085       >            Pose: 38053
+essen reichen, getränke ausschenken         essen auf teller geben, essen reichen
+Pose Frame added to Recording 33/51  
+/dhc/groups/bp2021ba1/data/lab_data/1652085113670/poseSequence.csv
+Pose Frame added to Recording 34/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651223183731/poseSequence.csv
+Pose Frame added to Recording 35/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653468941680/poseSequence.csv
+Pose Frame added to Recording 36/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651565920786/poseSequence.csv
+Pose Frame added to Recording 37/51  
+/dhc/groups/bp2021ba1/data/lab_data/1652708794017/poseSequence.csv
+Pose Frame added to Recording 38/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651567699911/poseSequence.csv
+Pose Frame added to Recording 39/51  
+/dhc/groups/bp2021ba1/data/lab_data/1652431073226/poseSequence.csv
+Pose Frame added to Recording 40/51  
+Recording Metadata Corrupt: 1653479275869 or only ONE activity. Returning empty pose frame (!)
+Pose Frame added to Recording 41/51  
+Recording Metadata Corrupt: 1651149014709 or only ONE activity. Returning empty pose frame (!)
+Pose Frame added to Recording 42/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651674149525/poseSequence.csv
+Pose Frame added to Recording 43/51  
+/dhc/groups/bp2021ba1/data/lab_data/1652432054525/poseSequence.csv
+Pose Frame added to Recording 44/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653466299712/poseSequence.csv
+Pose Frame added to Recording 45/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653483997299/poseSequence.csv
+Pose Frame added to Recording 46/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651140012109/poseSequence.csv
+Pose Frame added to Recording 47/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651153453225/poseSequence.csv
+Pose Frame added to Recording 48/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653477482139/poseSequence.csv
+Pose Frame added to Recording 49/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653463600238/poseSequence.csv
+Pose Frame added to Recording 50/51  
+/dhc/groups/bp2021ba1/data/lab_data/1652101854919/poseSequence.csv
+Pose Frame added to Recording 51/51  

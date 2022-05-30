@@ -115,7 +115,7 @@ class RainbowModel(ABC):
         """
         assert_type([(windows[0], Window)])
 
-        sensor_arrays = list(map(lambda window: window.sensor_array, windows))
+        sensor_arrays = list(map(lambda window: window.data_array, windows))
         activities = list(map(lambda window: window.activity, windows))
 
         # to_categorical converts the activity_array to the dimensions needed

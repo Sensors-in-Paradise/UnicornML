@@ -1,7 +1,6 @@
 from fileinput import filename
 import os
 import random
-from alex.UnicornML.src.models import ResNetModel_Multimodal
 
 import numpy as np
 from sklearn.model_selection import StratifiedKFold
@@ -14,6 +13,7 @@ from loader.Preprocessor import Preprocessor
 from models.JensModel import JensModel
 from models.RainbowModel import RainbowModel
 from models.ResNetModel import ResNetModel
+from models.ResNetModel_Multimodal import ResNetModelMultimodal
 from utils.filter_activities import filter_activities
 from utils.folder_operations import new_saved_experiment_folder
 from utils.DataConfig import Sonar22CategoriesConfig, OpportunityConfig, SonarConfig, LabPoseConfig
@@ -30,28 +30,30 @@ Number of recordings per person
 """
 
 # DEFINE MACROS
-#data_config = LabPoseConfig(dataset_path='/dhc/groups/bp2021ba1/data/lab_data')#OpportunityConfig(dataset_path='/dhc/groups/bp2021ba1/data/opportunity-dataset')
-data_config = SonarConfig(dataset_path='/dhc/groups/bp2021ba1/data/lab_data')#OpportunityConfig(dataset_path='/dhc/groups/bp2021ba1/data/opportunity-dataset')
+data_config = LabPoseConfig(dataset_path='/dhc/groups/bp2021ba1/data/lab_data_filtered_without_null')#OpportunityConfig(dataset_path='/dhc/groups/bp2021ba1/data/opportunity-dataset')
+#data_config = SonarConfig(dataset_path='/dhc/groups/bp2021ba1/data/lab_data')#OpportunityConfig(dataset_path='/dhc/groups/bp2021ba1/data/opportunity-dataset')
 settings.init(data_config)
 random.seed(1678978086101)
 
 k_fold_splits = 3
-numEpochsBeforeTL = 10
-numEpochsForTL = 3
-minimumRecordingsPerLeftOutPerson = 5
+numEpochs = 10
 
 # LOAD DATA
-recordings = settings.DATA_CONFIG.load_dataset()#limit=75
+recordings = settings.DATA_CONFIG.load_dataset(limit=40)
+print("==> LOADING OF RECORDINGS DONE")
 
 # APPEND POSE FRAMES 
 def process_recording(recording_with_index):
     i = recording_with_index[0]
     recording = recording_with_index[1]
-    pose_frame = get_poseframe(recording)
+    pose_frame = get_poseframe(recording, "/dhc/groups/bp2021ba1/data/lab_data")
     
     print(f"Pose Frame added to Recording {i+1}/{len(recordings)}  ")
-    #print(recording.recording_folder, recording.pose_frame)
     return pose_frame
+
+# pose_frames = []
+# for i, k in list(enumerate(recordings)):
+#     pose_frames.append(process_recording((i,k)))
 
 pool = Pool()
 pose_frames = pool.map(process_recording, list(enumerate(recordings)), 1)
@@ -71,10 +73,7 @@ print(f"Filtered out {initialLength - len(recordings)} Recordings (!)")
 print("==> APPENDING POSE FRAMES DONE")
 
 
-# DEFINE TRAINING
-def split_list_by_people(recordings: "list[Recording]", peopleForListA: "list[str]") -> tuple[np.ndarray, np.ndarray]:
-    """ Splits the recordings into a tuple of a sublist of recordings of people in peopleForListA and the recordings of other people"""
-    return np.array(list(filter(lambda recording: recording.subject in peopleForListA,recordings))), np.array(list(filter(lambda recording: recording.subject not in peopleForListA, recordings)))
+# CONFIG TRAINING
 window_size = 100
 n_sensor_features = recordings[0].sensor_frame.shape[1]
 n_pose_features = recordings[0].pose_frame.shape[1]
@@ -87,8 +86,7 @@ experiment_folder_path = new_saved_experiment_folder(
 )
 
 
-def evaluate(model: "ResNetModel_Multimodal",X_test: np.ndarray, y_test_true: np.ndarray, confusionMatrixFileName=None, confusionMatrixTitle="") -> tuple[float, float,float, np.ndarray]:
-    y_test_pred = model.predict(X_test)
+def evaluate(y_test_pred: np.ndarray, y_test_true: np.ndarray, confusionMatrixFileName=None, confusionMatrixTitle="") -> tuple[float, float,float, np.ndarray]:
     acc = accuracy(y_test_pred, y_test_true)
     if confusionMatrixFileName:
         create_conf_matrix(experiment_folder_path, y_test_pred, y_test_true, file_name = confusionMatrixFileName, title=confusionMatrixTitle+", acc:"+str(int(acc*10000)/100)+"%") 
@@ -96,13 +94,13 @@ def evaluate(model: "ResNetModel_Multimodal",X_test: np.ndarray, y_test_true: np
     f1_weighted = f1_score(np.argmax(y_test_true, axis=1), np.argmax(y_test_pred, axis=1), average="weighted")    
     return acc, f1_macro, f1_weighted, y_test_true
 
-def instanciateModel(use_sensor_frame = True, use_pose_frame = False):
+def instanciateModel(use_sensor_frame = True, use_pose_frame = False) -> ResNetModelMultimodal:
     n_features = 0
     n_features += n_sensor_features if (use_sensor_frame) else 0
     n_features += n_pose_features if (use_pose_frame) else 0
 
-    return ResNetModel_Multimodal(
-        n_epochs=numEpochsBeforeTL,
+    return ResNetModelMultimodal(
+        n_epochs=numEpochs,
         window_size=100,
         n_features=n_features,
         n_outputs=n_outputs,
@@ -111,7 +109,26 @@ def instanciateModel(use_sensor_frame = True, use_pose_frame = False):
         use_pose_frame=use_pose_frame
     )
 
-model = instanciateModel(True, False)
-model = instanciateModel(True, True)
-model = instanciateModel(False, True)
+
+# TRAIN AND PREDICT
+multiModals = [(True, False), (True, True), (False, True)]
+for modality_index, (use_sensor_frame, use_pose_frame) in enumerate(multiModals):
+    model = instanciateModel(use_sensor_frame=use_sensor_frame, use_pose_frame=use_pose_frame)
+    model.n_epochs = numEpochs
+
+    #k_fold = StratifiedKFold(n_splits=k_fold_splits, random_state=None)
+    split_index = int(0.8 * len(recordings))
+    recordingsTrain = recordings[:split_index]
+    recordingsTest = recordings[split_index+1:]
+
+    x_train, y_train = model.windowize_convert_fit(recordingsTrain)
+
+    x_test, y_test = model.windowize_convert(recordingsTest)
+    y_test_pred = model.predict(x_test)
+    acc, f1_macro, f1_weighted, _ = evaluate(y_test_pred, y_test)
+
+    print(f"==== Sensor Features: {use_sensor_frame}   Pose Features: {use_pose_frame} ====")
+    print(f"Accuracy: {acc}")
+    print(f"F1 Macro: {f1_macro}")
+    print(f"F1 Weighted: {f1_weighted}")
 

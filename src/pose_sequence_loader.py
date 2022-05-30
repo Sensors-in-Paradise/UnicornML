@@ -4,21 +4,19 @@ import os
 import pandas as pd
 import json
 
-def get_poseframe(recording: Recording):
+NULL_ACTIVITY_LABEL = "null - activity"
+def get_poseframe(recording: Recording, recordings_root: str):
     try:
-        metadata_file_path = os.path.join(recording.recording_folder, 'metadata.json')
-        with open(metadata_file_path) as metadata_file:
-            metadata = json.load(metadata_file)
-            pose_startTime = metadata["startTimestamp"]
-            for activity in metadata["activities"]:
-                #skipping the first activities if they have the same label
-                if activity["label"] != metadata["activities"][0]["label"]:
-                    pose_time_second_activity = activity["timeStarted"]
-                    break
+        metadata_file_path = os.path.join(recordings_root, recording.recording_folder, 'metadata.json')
+        pose_startTime, pose_time_second_activity = _extract_metadata_information(metadata_file_path)
+    except Exception as e:
+        print(f"Recording {recording.recording_folder}: {e} Returning empty pose frame (!)")
+        return pd.DataFrame()
     except:
-        raise Exception(f"Recording Metadata Corrupt: {recording.recording_folder}")
+        print(f"Recording {recording.recording_folder}: Metadata Corrupt. Returning empty pose frame (!)")
+        return pd.DataFrame()
 
-    pose_file_path = os.path.join(recording.recording_folder, 'poseSequence.csv')
+    pose_file_path = os.path.join(recordings_root, recording.recording_folder, 'poseSequence.csv')
     pose_frame = pd.read_csv(
         pose_file_path, skiprows=_get_pose_sequence_headersize(pose_file_path)
     )
@@ -32,14 +30,35 @@ def get_poseframe(recording: Recording):
         pose_frame = _sampleUp_poseframe(
                     pose_frame, recording.time_frame, absolute_frame_start_time 
         )
+    except Exception as e:
+        print(f"Recording {recording.recording_folder}: {e} Returning empty pose frame (!)")
+        return pd.DataFrame()
     except:
-        print(f"Recording {recording.recording_index} failed to get sampled up. Returning empty pose frame (!)")
+        print(f"Recording {recording.recording_folder}: Pose Frame failed to get sampled up. Returning empty pose frame (!)")
         return pd.DataFrame()
 
     pose_frame = _delete_timestamps_poseframe(pose_frame)
     
     return pose_frame
 
+def _extract_metadata_information(metadata_file_path):
+    with open(metadata_file_path) as metadata_file:
+        metadata = json.load(metadata_file)
+
+        null_filtered_activities = list(filter(lambda act: act["label"] != NULL_ACTIVITY_LABEL, metadata['activities']))
+
+        pose_startTime = null_filtered_activities[0]["timeStarted"]
+        
+        pose_time_second_activity = None
+        for activity in null_filtered_activities:
+            #skipping the first activities if they have the same label
+            if activity["label"] != null_filtered_activities[0]["label"]:
+                pose_time_second_activity = activity["timeStarted"]
+                break
+    
+    if pose_time_second_activity == None:
+        raise Exception("Metadata has less than 2 Activities.") 
+    return pose_startTime, pose_time_second_activity
 
 def _get_pose_sequence_headersize(pose_file_path: str) -> int:
     headersize = 0
@@ -57,20 +76,24 @@ def _delete_timestamps_poseframe(frame):
 
     return frame
 
-
 def _get_absolute_start_time(recording: Recording, pose_start_time, pose_time_second_activity):
     activities = recording.activities
     first_activity = activities[0]
     for i in range(len(activities)-1):
         if first_activity != activities[i]:
             break
+        if i == len(activities)-1:
+            raise Exception("Recording Frame has only ONE activity")
 
     frame_first_time = recording.time_frame[0]
     frame_time_second_activity = recording.time_frame[i]
     frame_diff = round((frame_time_second_activity - frame_first_time) / 1000)
 
     pose_diff = pose_time_second_activity - pose_start_time
-    assert abs(frame_diff - pose_diff) < 1000, f"Second activity of recording {recording.recording_folder} significantly shifted"
+    try:
+        assert abs(frame_diff - pose_diff) < 1000, f"Second activity of recording {recording.recording_folder} significantly shifted"
+    except:
+        raise Exception(f"Activity TimeStamps of Frame & Metadata significantly shifted.")
 
     absolute_frame_start_time = pose_time_second_activity - frame_diff
     return absolute_frame_start_time
