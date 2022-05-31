@@ -46,6 +46,7 @@ class ResNetModel(RainbowModel):
 
         # hyper params to instance vars
         super().__init__(**kwargs)
+        self.normalization_layer = kwargs["normalization_layer"]
         self.window_size = kwargs["window_size"]
         self.verbose = kwargs.get("verbose") or True
         self.n_epochs = kwargs.get("n_epochs") or 10
@@ -65,14 +66,21 @@ class ResNetModel(RainbowModel):
         )
         self.callbacks.append(keras.callbacks.ReduceLROnPlateau(monitor='loss', factor=0.5, patience=50, min_lr=0.0001))
 
-    def _preprocessing_layer(self, input_layer: keras.layers.Layer):
-        pass
+    def prepare(self, recordings: list[Recording]):
+        sensor_frames = np.array([recording.sensor_frame for recording in recordings])
+        self.normalization_layer = tf.keras.layers.Normalization(axis=-1)
+        self.normalization_layer.adapt(sensor_frames)
+
+    def _preprocessing_layer(self, input_layer: keras.layers.Layer) -> keras.layers.Layer:
+        x = self.normalization_layer(input_layer) if self.normalization_layer is not None else input_layer
+
+        return x
 
     def _create_model(self, n_features, n_outputs):
         n_feature_maps = 64
        
         input_layer = keras.layers.Input((self.window_size, n_features))
-        x = self.preprocessing_layer(input_layer)
+        x = self._preprocessing_layer(input_layer)
 
         # BLOCK 1
 

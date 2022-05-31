@@ -37,6 +37,9 @@ Number of recordings per person
 
 data_config = OpportunityConfig(dataset_path='/dhc/groups/bp2021ba1/data/opportunity-dataset')#Sonar22CategoriesConfig(dataset_path='/dhc/groups/bp2021ba1/data/filtered_dataset_without_null')#
 settings.init(data_config)
+
+
+exit(1)
 random.seed(1678978086101)
 
 k_fold_splits = 2
@@ -48,6 +51,8 @@ recordings = settings.DATA_CONFIG.load_dataset()#limit=75
 
 # Preprocess
 recordings = Preprocessor().our_preprocess(recordings)
+preprocess_model = ResNetModel().prepare(recordings)
+normalization_layer = preprocess_model.normalization_layer
 
 def split_list_by_people(recordings: "list[Recording]", peopleForListA: "list[str]") -> tuple[np.ndarray, np.ndarray]:
     """ Splits the recordings into a tuple of a sublist of recordings of people in peopleForListA and the recordings of other people"""
@@ -169,6 +174,7 @@ def instanciateModel():
         n_features=n_features,
         n_outputs=n_outputs,
         batch_size=64,
+        normalization_layer=normalization_layer
     )
 def freezeDenseLayers(model: RainbowModel):
     # Set non dense layers to not trainable (freezing them)

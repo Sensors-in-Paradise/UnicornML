@@ -28,10 +28,19 @@ class DataConfig:
     subject_idx_to_subject_name_map = None
 
     timestep_frequency = None # Hz
-
+    variance = None
+    mean = None
     # interface (subclass responsibility to define) ------------------------------------------------------------
-
     def load_dataset(self) -> "list[Recording]":
+        recordings = self._load_dataset()
+        sensor_frames = np.array([recording.sensor_frame for recording in recordings])
+        layer = tf.keras.layers.Normalization(axis=-1)
+        layer.adapt(sensor_frames)
+        self.variance = layer.variance
+        self.mean = layer.mean
+        return recordings
+
+    def _load_dataset(self) -> "list[Recording]":
         raise NotImplementedError(
             "init subclass of Config that defines the method activity_idx_to_activity_name"
         )
@@ -108,7 +117,7 @@ class OpportunityConfig(DataConfig):
             5: "sandwich time",
         }
 
-    def load_dataset(self) -> "list[Recording]":
+    def _load_dataset(self) -> "list[Recording]":
         return load_opportunity_dataset(self.dataset_path)
 
 
@@ -142,7 +151,7 @@ class SonarConfig(DataConfig):
         self.sensor_suffix_order = ["LF", "LW", "ST", "RW", "RF"]
         self.csv_header_size = 8
 
-    def load_dataset(self, **args) -> "list[Recording]":
+    def _load_dataset(self, **args) -> "list[Recording]":
         return load_sonar_dataset(self.dataset_path, **args)
 
     raw_subject_label = [
@@ -261,7 +270,7 @@ class Sonar22CategoriesConfig(DataConfig):
         self.sensor_suffix_order = ["LF", "LW", "ST", "RW", "RF"]
         self.csv_header_size = 8
 
-    def load_dataset(self, **args) -> "list[Recording]":
+    def _load_dataset(self, **args) -> "list[Recording]":
         return load_recordings(self.dataset_path,self.raw_label_to_activity_idx_map, **args)
 
     category_labels = {'rollstuhl transfer': 0, 'essen reichen': 1, 'umkleiden': 2, 'bad vorbereiten': 3, 'bett machen': 4, 'gesamtwaschen im bett': 5, 'aufräumen': 6, 'geschirr einsammeln': 7, 'essen austragen': 8, 'getränke ausschenken': 9, 'küchenvorbereitung': 10, 'waschen am waschbecken': 11, 'rollstuhl schieben': 12, 'mundpflege': 13, 'haare kämmen': 14, 'essen auf teller geben': 15, 'dokumentation': 16, 'aufwischen (staub)': 17, 'haare waschen': 18, 'medikamente stellen': 19, 'accessoires anlegen': 20, 'föhnen': 21}
