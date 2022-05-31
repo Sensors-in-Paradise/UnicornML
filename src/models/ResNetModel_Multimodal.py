@@ -251,19 +251,20 @@ class ResNetModelMultimodal(RainbowModel):
         assert (
             self.window_size is not None
         ), "window_size has to be set in the constructor of your concrete model class please, you stupid ass"
-        if self.window_size > 25:
-            print(
-                "\n===> WARNING: the window_size is big with the used windowize algorithm (Jens) you have much data loss!!! (each activity can only be a multiple of the half the window_size, with overlapping a half of a window is cutted)\n"
-            )
+        # if self.window_size > 25:
+        #     print(
+        #         "\n===> WARNING: the window_size is big with the used windowize algorithm (Jens) you have much data loss!!! (each activity can only be a multiple of the half the window_size, with overlapping a half of a window is cutted)\n"
+        #     )
 
         self._print_jens_windowize_monitoring(recordings)
         # Refactoring idea (speed): Mulitprocessing https://stackoverflow.com/questions/20190668/multiprocessing-a-for-loop/20192251#20192251
         print("windowizing in progress ....")
         recording_windows = list(map(self._windowize_recording, recordings))
-        print("windowizing done")
-        return list(
+        recording_windows = list(
             itertools.chain.from_iterable(recording_windows)
         )  # flatten (reduce dimension)
+        print(f"windowizing done: {len(recording_windows)} windows")
+        return recording_windows
 
     def convert(self, windows: "list[Window]") -> "tuple[np.ndarray, np.ndarray]":
         X_train, y_train = super().convert(windows)

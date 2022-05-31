@@ -90,7 +90,7 @@ def create_recording(
     sensor_frame = raw_recording_frame.drop([time_column_name], axis=1)
     sensor_frame = reorder_sensor_columns(sensor_frame)
 
-    return Recording(sensor_frame, time_frame, activity, subject)
+    return Recording(time_frame, activity, subject, sensor_frame)
 
 
 def reorder_sensor_columns(sensor_frame: pd.DataFrame) -> pd.DataFrame:

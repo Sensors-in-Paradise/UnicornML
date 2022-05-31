@@ -40,6 +40,7 @@ numEpochs = 10
 
 # LOAD DATA
 recordings = settings.DATA_CONFIG.load_dataset(limit=40)
+recordings = Preprocessor().our_preprocess(recordings)
 print("==> LOADING OF RECORDINGS DONE")
 
 # APPEND POSE FRAMES 
@@ -123,9 +124,13 @@ for modality_index, (use_sensor_frame, use_pose_frame) in enumerate(multiModals)
 
     x_train, y_train = model.windowize_convert_fit(recordingsTrain)
 
-    x_test, y_test = model.windowize_convert(recordingsTest)
+    x_test, y_test_actual = model.windowize_convert(recordingsTest)
     y_test_pred = model.predict(x_test)
-    acc, f1_macro, f1_weighted, _ = evaluate(y_test_pred, y_test)
+    acc, f1_macro, f1_weighted, _ = evaluate(
+        y_test_pred, 
+        y_test_actual, 
+        confusionMatrixFileName=f"Confusion {'SENSOR' if use_sensor_frame else 'x'} | {'POSE' if use_pose_frame else 'x'}"
+    )
 
     print(f"==== Sensor Features: {use_sensor_frame}   Pose Features: {use_pose_frame} ====")
     print(f"Accuracy: {acc}")
