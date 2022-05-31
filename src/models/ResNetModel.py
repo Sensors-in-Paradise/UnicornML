@@ -65,14 +65,18 @@ class ResNetModel(RainbowModel):
         )
         self.callbacks.append(keras.callbacks.ReduceLROnPlateau(monitor='loss', factor=0.5, patience=50, min_lr=0.0001))
 
+    def _preprocessing_layer(self, input_layer: keras.layers.Layer):
+        pass
+
     def _create_model(self, n_features, n_outputs):
         n_feature_maps = 64
-
+       
         input_layer = keras.layers.Input((self.window_size, n_features))
+        x = self.preprocessing_layer(input_layer)
 
         # BLOCK 1
 
-        conv_x = keras.layers.Conv1D(filters=n_feature_maps, kernel_size=8, padding='same')(input_layer)
+        conv_x = keras.layers.Conv1D(filters=n_feature_maps, kernel_size=8, padding='same')(x)
         conv_x = keras.layers.BatchNormalization()(conv_x)
         conv_x = keras.layers.Activation('relu')(conv_x)
 
@@ -84,7 +88,7 @@ class ResNetModel(RainbowModel):
         conv_z = keras.layers.BatchNormalization()(conv_z)
 
         # expand channels for the sum
-        shortcut_y = keras.layers.Conv1D(filters=n_feature_maps, kernel_size=1, padding='same')(input_layer)
+        shortcut_y = keras.layers.Conv1D(filters=n_feature_maps, kernel_size=1, padding='same')(x)
         shortcut_y = keras.layers.BatchNormalization()(shortcut_y)
 
         output_block_1 = keras.layers.add([shortcut_y, conv_z])
