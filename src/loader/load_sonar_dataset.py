@@ -10,7 +10,7 @@ from utils import settings
 from utils.Recording import Recording
 from loader.XSensRecordingReader import XSensRecordingReader
 
-def load_sonar_dataset(dataset_path: str, limit_n_recs: int = None, multiprocessing: bool = True) -> "list[Recording]":
+def load_sonar_dataset(dataset_path: str, limit_n_recs: int = None, multiprocessing: bool = False) -> "list[Recording]":
     """
     Returns a list of the raw recordings (activities, subjects included, None values) (different representaion of dataset)
     directory structure bias! not shuffled!
@@ -76,14 +76,14 @@ def load_sonar_dataset(dataset_path: str, limit_n_recs: int = None, multiprocess
 def read_recording_from_folder(enumerated_recording_folder_names: 'tuple(int, str)', continue_on_error: bool = True):
     recording_folder_path = enumerated_recording_folder_names[1]
     recording_idx = enumerated_recording_folder_names[0]
-    try:
-        subject_folder_name = get_subject_folder_name(recording_folder_path)
-        return create_recording(recording_folder_path, subject_folder_name, recording_idx)
-    except Exception as e:
-        if continue_on_error:
-            print("===> Will skip Recording, because error while reading! path:" + recording_folder_path + "\nError:\n\t" + str(e))
-            return None
-        raise e
+    # try:
+    subject_folder_name = get_subject_folder_name(recording_folder_path)
+    return create_recording(recording_folder_path, subject_folder_name, recording_idx)
+    # except Exception as e:
+    #     if continue_on_error:
+    #         print("===> Will skip Recording, because error while reading! path:" + recording_folder_path + "\nError:\n\t" + str(e))
+    #         return None
+    #     raise e
 
 
 
@@ -111,7 +111,10 @@ def get_activity_dataframe(time_frame, recording_folder_path: str) -> pd.DataFra
         return label_obj
     
     def str_label_to_activity_idx(label_obj: dict):
-        label_obj["label"] = settings.DATA_CONFIG.raw_label_to_activity_idx(label_obj["label"])
+        try:
+            label_obj["label"] = settings.DATA_CONFIG.raw_label_to_activity_idx(label_obj["label"])
+        except:
+            label_obj["label"] = -1
         return label_obj
 
     activities_meta = list(map(label_timestamp_to_microseconds, activities_meta))
@@ -174,23 +177,26 @@ def create_recording(recording_folder_path: str, subject: str, recording_idx: in
     time2 = time.time()
     time_column_name = "SampleTimeFine"
     time_frame = raw_recording_frame[time_column_name]
-
-    activity = get_activity_dataframe(time_frame, recording_folder_path)
+    
+    #pose_frame = XSensRecordingReader.get_pose_frame()
     time3 = time.time()
+    
+    activity = get_activity_dataframe(time_frame, recording_folder_path)
+    time4 = time.time()
 
     sensor_frame = raw_recording_frame.drop([time_column_name], axis=1)
     sensor_frame = reorder_sensor_columns(recording_folder_path, sensor_frame)
-    time4 = time.time()
+    time5 = time.time()
     print(
-        "took: {:.3f} - {:.3f} - {:.3f}".format(
-            (time2 - time1) * 1000.0, (time3 - time2) * 1000.0, (time4 - time3) * 1000.0
+        "took: {:.3f} - {:.3f} - {:.3f} - {:.3f}".format(
+            (time2 - time1) * 1000.0, (time3 - time2) * 1000.0, (time4 - time3) * 1000.0, (time5 - time4) * 1000.0
         )
     )
 
     if sensor_frame is None:
         return None
 
-    return Recording(sensor_frame, time_frame, activity, subject, recording_idx)
+    return Recording(time_frame, activity, subject, recording_idx, sensor_frame, recording_folder=recording_folder_path)#, pose_frame)
 
 
 def reorder_sensor_columns(

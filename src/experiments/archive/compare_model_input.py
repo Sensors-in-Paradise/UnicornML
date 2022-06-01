@@ -48,7 +48,7 @@ def our_X_y() -> (np.ndarray, np.ndarray):
     )  # we dont use jens convert as it expands a dimension, does categorical
 
     # !!!! From Rainbow Model convert !!!
-    X = np.array(list(map(lambda window: window.sensor_array, windows)))
+    X = np.array(list(map(lambda window: window.data_array, windows)))
     y = np.array(list(map(lambda window: window.activity, windows)))
 
     return X, y

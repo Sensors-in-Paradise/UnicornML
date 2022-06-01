@@ -62,8 +62,8 @@ window_start_idx = [1, 3, 11, 13, 21, 23, 25] # see ml-rainbow miro board for vi
 # (the first feature is equal to the time frame to check the cutting)
 assert len(window_start_idx) == n_windows, "7 windows expected"
 for i, window in enumerate(windows):
-    assert window.sensor_array[0][0] == window_start_idx[i], f"window was cutted wrong, window {i} should be {window_start_idx[i]} at window.sensor_array[0][0]"
+    assert window.data_array[0][0] == window_start_idx[i], f"window was cutted wrong, window {i} should be {window_start_idx[i]} at window.sensor_array[0][0]"
 
 # manual check
 for i, window in enumerate(windows):
-    print(f"window {i+1}:\n", window.sensor_array, "\n\n")
+    print(f"window {i+1}:\n", window.data_array, "\n\n")
