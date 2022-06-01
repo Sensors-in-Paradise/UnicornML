@@ -55,6 +55,10 @@ class ResNetModel(RainbowModel):
 
         self.n_features = kwargs["n_features"]
         self.n_outputs = kwargs["n_outputs"]
+
+        # per feature measures of input distribution
+        self.input_distribution_mean = kwargs["input_distribution_mean"]
+        self.input_distribution_variance = kwargs["input_distribution_variance"]
         # create model
         self.model = self._create_model(self.n_features, self.n_outputs)
         # Refactoring idea:
@@ -68,7 +72,7 @@ class ResNetModel(RainbowModel):
 
     def prepare(self, recordings: list[Recording]):
         sensor_frames = np.array([recording.sensor_frame for recording in recordings])
-        self.normalization_layer = tf.keras.layers.Normalization(axis=-1)
+        self.normalization_layer = tf.keras.layers.Normalization(axis=-1, variance=self.input_distribution_variance, mean=self.input_distribution_mean)
         self.normalization_layer.adapt(sensor_frames)
 
     def _preprocessing_layer(self, input_layer: keras.layers.Layer) -> keras.layers.Layer:

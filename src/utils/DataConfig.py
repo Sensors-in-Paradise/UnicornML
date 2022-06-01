@@ -26,7 +26,6 @@ def ffill1D(t):
     idx = tf.cumsum(tf.cast(mask, tf.int64), axis=0)
     # Gather values
     result = tf.gather(values, idx)
-
     # Find non-NaN values (if row of tensor started with NaN)
     result = tf.where(tf.math.is_nan(result), tf.ones_like(result) * 0, result)
     return result
@@ -131,6 +130,38 @@ class DataConfig:
             self.activity_idx_to_activity_name_map is not None
         ), "A subclass of Config which initializes the var activity_idx_to_activity_name_map should be used to access activity mapping."
         return len(self.activity_idx_to_activity_name_map)
+
+    def _loadDataSetMeasures(self):
+        """ 
+        Returns feature wise variance and mean for the dataset of this data config if available, else Tuple of None, None
+        """
+        measures = self._loadMeasuresDict()
+        if not measures is None:
+            return np.fromstring(measures["variance"]), np.fromstring(measures["mean"])
+        return None, None
+
+    def _saveDataSetMeasures(self, variances, standardDeviations):
+        metadata = {}
+        identifier = self._getDataConfigIdentifier()
+        measures = {"variance": np.array_str(
+            variances), "mean": np.array_str(standardDeviations)}
+        if os.path.isfile(DataConfig.DATA_CONFIG_METADATA_FILE):
+            metadata = json.load(DataConfig.DATA_CONFIG_METADATA_FILE)
+            metadata[identifier] = measures
+        else:
+            metadata[identifier] = measures
+        json.dump(metadata, DataConfig.DATA_CONFIG_METADATA_FILE)
+
+    def _loadMeasuresDict(self):
+        """
+        Returns the metadata json of this data config's metadata as dict
+        """
+        if os.path.isfile(DataConfig.DATA_CONFIG_METADATA_FILE):
+            metadata = json.load(DataConfig.DATA_CONFIG_METADATA_FILE)
+            identifier = self._getDataConfigIdentifier()
+            if identifier in metadata:
+                return metadata[identifier]
+        return None
 
     def _loadDataSetMeasures(self):
         """ 
@@ -347,6 +378,9 @@ class SonarConfig(DataConfig):
             ],
         },
     ]
+
+    def _getDataConfigIdentifier(self):
+        return type(self).__name__ + self.dataset_path
 
     def _getDataConfigIdentifier(self):
         return type(self).__name__ + self.dataset_path
