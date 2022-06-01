@@ -1,3 +1,6 @@
+from datetime import datetime
+
+from utils.Recording import Recording
 from utils.cache_recordings import load_recordings
 from utils.typing import assert_type
 from loader.load_opportunity_dataset import load_opportunity_dataset
@@ -5,10 +8,33 @@ from loader.load_sonar_dataset import load_sonar_dataset
 import itertools
 import json
 import os
-
+import numpy as np
 import pandas as pd
 from dataclasses import dataclass
+import tensorflow as tf
+import math
+def ffill1D(t):
+    # Find non-NaN values
+    mask = ~tf.math.is_nan(t)
 
+    # Take non-NaN values and precede them with a NaN
+    values = tf.concat([[math.nan], tf.boolean_mask(t, mask)], axis=0)
+
+    # Use cumsum over mask to find the index of the non-NaN value to pick
+    idx = tf.cumsum(tf.cast(mask, tf.int64), axis=0)
+    # Gather values
+    result = tf.gather(values, idx)
+    
+    # Find non-NaN values (if row of tensor started with NaN)
+    result = tf.where(tf.math.is_nan(result), tf.ones_like(result) * 0, result)
+    return result
+
+
+def ffill(t):
+    if len(tf.shape(t)) > 2:
+        return tf.map_fn(fn=ffill, elems=t)
+    else:
+        return tf.map_fn(fn=ffill1D, elems=t)
 
 @dataclass
 class DataConfig:
@@ -30,16 +56,29 @@ class DataConfig:
     timestep_frequency = None # Hz
     variance = None
     mean = None
-    # interface (subclass responsibility to define) ------------------------------------------------------------
+    DATA_CONFIG_METADATA_FILE = "dataConfigMetadata.json"
     def load_dataset(self) -> "list[Recording]":
         recordings = self._load_dataset()
-        sensor_frames = np.array([recording.sensor_frame for recording in recordings])
-        layer = tf.keras.layers.Normalization(axis=-1)
-        layer.adapt(sensor_frames)
-        self.variance = layer.variance
-        self.mean = layer.mean
+
+        print("Calculating mean and variance of whole dataset once. This can take a while...")
+        variance, mean = self._loadDataSetMeasures()
+
+        if variance is None or mean is None:  
+            startTime = datetime.now()
+            sensor_frames = ffill(tf.constant(np.concatenate([recording.sensor_frame.to_numpy() for recording in recordings], axis=0)))
+            layer = tf.keras.layers.Normalization(axis=-1)
+            layer.adapt(sensor_frames)
+            self.variance = layer.variance
+            self.mean = layer.mean
+            endTime = datetime.now()
+            print("Time spent for finding mean and variance: ", str(endTime-startTime))
+            self._saveDataSetMeasures(self.variance, self.mean)
+        else:
+            self.variance = variance
+            self.mean = mean
         return recordings
 
+    # interface (subclass responsibility to define) ------------------------------------------------------------
     def _load_dataset(self) -> "list[Recording]":
         raise NotImplementedError(
             "init subclass of Config that defines the method activity_idx_to_activity_name"
@@ -81,7 +120,40 @@ class DataConfig:
             self.activity_idx_to_activity_name_map is not None
         ), "A subclass of Config which initializes the var activity_idx_to_activity_name_map should be used to access activity mapping."
         return len(self.activity_idx_to_activity_name_map)
+    
+    def _loadDataSetMeasures(self):
+        """ 
+        Returns feature wise variance and mean for the dataset of this data config if available, else Tuple of None, None
+        """
+        measures = self._loadMeasuresDict()
+        if not measures is None:
+            return np.fromstring(measures["variance"]), np.fromstring(measures["mean"])
+        return None, None
 
+    def _saveDataSetMeasures(self, variances, standardDeviations):
+        metadata = {}
+        identifier = self._getDataConfigIdentifier()
+        measures = {"variance": np.array_str(variances), "mean": np.array_str(standardDeviations)}
+        if os.path.isfile(DataConfig.DATA_CONFIG_METADATA_FILE):
+            metadata = json.load(DataConfig.DATA_CONFIG_METADATA_FILE)
+            metadata[identifier] = measures
+        else:
+            metadata[identifier] = measures
+        json.dump(metadata, DataConfig.DATA_CONFIG_METADATA_FILE)
+
+    def _loadMeasuresDict(self):
+        """
+        Returns the metadata json of this data config's metadata as dict
+        """
+        if os.path.isfile(DataConfig.DATA_CONFIG_METADATA_FILE):
+            metadata = json.load(DataConfig.DATA_CONFIG_METADATA_FILE)
+            identifier = self._getDataConfigIdentifier()
+            if identifier in metadata:
+                return metadata[identifier]
+        return None    
+
+    def _getDataConfigIdentifier(self):
+        return type(self).__name__
 
 class OpportunityConfig(DataConfig):
 
@@ -119,6 +191,9 @@ class OpportunityConfig(DataConfig):
 
     def _load_dataset(self) -> "list[Recording]":
         return load_opportunity_dataset(self.dataset_path)
+
+    def _getDataConfigIdentifier(self):
+        return type(self).__name__ + self.dataset_path
 
 
 class SonarConfig(DataConfig):
@@ -257,6 +332,8 @@ class SonarConfig(DataConfig):
             ],
         },
     ]
+    def _getDataConfigIdentifier(self):
+        return type(self).__name__ + self.dataset_path
 
 class Sonar22CategoriesConfig(DataConfig):
     def __init__(self, dataset_path: str):
@@ -274,3 +351,6 @@ class Sonar22CategoriesConfig(DataConfig):
         return load_recordings(self.dataset_path,self.raw_label_to_activity_idx_map, **args)
 
     category_labels = {'rollstuhl transfer': 0, 'essen reichen': 1, 'umkleiden': 2, 'bad vorbereiten': 3, 'bett machen': 4, 'gesamtwaschen im bett': 5, 'aufräumen': 6, 'geschirr einsammeln': 7, 'essen austragen': 8, 'getränke ausschenken': 9, 'küchenvorbereitung': 10, 'waschen am waschbecken': 11, 'rollstuhl schieben': 12, 'mundpflege': 13, 'haare kämmen': 14, 'essen auf teller geben': 15, 'dokumentation': 16, 'aufwischen (staub)': 17, 'haare waschen': 18, 'medikamente stellen': 19, 'accessoires anlegen': 20, 'föhnen': 21}
+
+    def _getDataConfigIdentifier(self):
+        return type(self).__name__ + self.dataset_path

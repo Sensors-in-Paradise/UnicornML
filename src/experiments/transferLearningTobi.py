@@ -39,7 +39,6 @@ data_config = OpportunityConfig(dataset_path='/dhc/groups/bp2021ba1/data/opportu
 settings.init(data_config)
 
 
-exit(1)
 random.seed(1678978086101)
 
 k_fold_splits = 2
@@ -48,7 +47,10 @@ numEpochsForTL = 3
 minimumRecordingsPerLeftOutPerson = 1
 # Load dataset
 recordings = settings.DATA_CONFIG.load_dataset()#limit=75
+print("Variance", data_config.variance)
+print("Mean", data_config.mean)
 
+exit(1)
 # Preprocess
 recordings = Preprocessor().our_preprocess(recordings)
 preprocess_model = ResNetModel().prepare(recordings)
@@ -174,7 +176,9 @@ def instanciateModel():
         n_features=n_features,
         n_outputs=n_outputs,
         batch_size=64,
-        normalization_layer=normalization_layer
+        normalization_layer=normalization_layer,
+        input_distribution_mean=data_config.input_distribution_mean,
+        input_distribution_variance=data_config.input_distribution_variance
     )
 def freezeDenseLayers(model: RainbowModel):
     # Set non dense layers to not trainable (freezing them)
