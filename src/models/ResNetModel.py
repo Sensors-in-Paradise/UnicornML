@@ -3,30 +3,12 @@
 
 from models.RainbowModel import RainbowModel
 import numpy as np
-import matplotlib.pyplot as plt
 import tensorflow as tf
-import h5py
-from tensorflow.keras import regularizers
-from tensorflow.keras.layers import (
-    Input,
-    Conv2D,
-    Dense,
-    Flatten,
-    Dropout,
-    LSTM,
-    GlobalMaxPooling1D,
-    MaxPooling2D,
-    BatchNormalization,
-)
 import tensorflow.keras as keras
-from tensorflow.keras.models import Model
-from tensorflow.keras.optimizers import Adam
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
 import itertools
-
-from datetime import datetime
-import os
+from loader.preprocessing import replaceNaN_ffill
 from utils.typing import assert_type
 from utils.Window import Window
 from utils.Recording import Recording
@@ -46,61 +28,52 @@ class ResNetModel(RainbowModel):
 
         # hyper params to instance vars
         super().__init__(**kwargs)
-        self.normalization_layer = kwargs["normalization_layer"]
         self.window_size = kwargs["window_size"]
         self.verbose = kwargs.get("verbose") or True
         self.n_epochs = kwargs.get("n_epochs") or 10
         self.learning_rate = kwargs.get("learning_rate") or 0.001
-        self.model_name = "jens_model"
+        self.model_name = "resnet_model"
 
         self.n_features = kwargs["n_features"]
         self.n_outputs = kwargs["n_outputs"]
 
-        # per feature measures of input distribution
-        self.input_distribution_mean = kwargs["input_distribution_mean"]
-        self.input_distribution_variance = kwargs["input_distribution_variance"]
         # create model
         self.model = self._create_model(self.n_features, self.n_outputs)
         # Refactoring idea:
         # n_features of a neuronal net is the number of inputs, so in reality n_features = window_size * n_features
         # we could have another name for that
-        
+
         print(
             f"Building model for {self.window_size} timesteps (window_size) and {kwargs['n_features']} features"
         )
-        self.callbacks.append(keras.callbacks.ReduceLROnPlateau(monitor='loss', factor=0.5, patience=50, min_lr=0.0001))
-
-    def prepare(self, recordings: list[Recording]):
-        sensor_frames = np.array([recording.sensor_frame for recording in recordings])
-        self.normalization_layer = tf.keras.layers.Normalization(axis=-1, variance=self.input_distribution_variance, mean=self.input_distribution_mean)
-        self.normalization_layer.adapt(sensor_frames)
-
-    def _preprocessing_layer(self, input_layer: keras.layers.Layer) -> keras.layers.Layer:
-        x = self.normalization_layer(input_layer) if self.normalization_layer is not None else input_layer
-
-        return x
+        self.callbacks.append(keras.callbacks.ReduceLROnPlateau(
+            monitor='loss', factor=0.5, patience=50, min_lr=0.0001))
 
     def _create_model(self, n_features, n_outputs):
         n_feature_maps = 64
-       
+
         input_layer = keras.layers.Input((self.window_size, n_features))
         x = self._preprocessing_layer(input_layer)
 
         # BLOCK 1
 
-        conv_x = keras.layers.Conv1D(filters=n_feature_maps, kernel_size=8, padding='same')(x)
+        conv_x = keras.layers.Conv1D(
+            filters=n_feature_maps, kernel_size=8, padding='same')(x)
         conv_x = keras.layers.BatchNormalization()(conv_x)
         conv_x = keras.layers.Activation('relu')(conv_x)
 
-        conv_y = keras.layers.Conv1D(filters=n_feature_maps, kernel_size=5, padding='same')(conv_x)
+        conv_y = keras.layers.Conv1D(
+            filters=n_feature_maps, kernel_size=5, padding='same')(conv_x)
         conv_y = keras.layers.BatchNormalization()(conv_y)
         conv_y = keras.layers.Activation('relu')(conv_y)
 
-        conv_z = keras.layers.Conv1D(filters=n_feature_maps, kernel_size=3, padding='same')(conv_y)
+        conv_z = keras.layers.Conv1D(
+            filters=n_feature_maps, kernel_size=3, padding='same')(conv_y)
         conv_z = keras.layers.BatchNormalization()(conv_z)
 
         # expand channels for the sum
-        shortcut_y = keras.layers.Conv1D(filters=n_feature_maps, kernel_size=1, padding='same')(x)
+        shortcut_y = keras.layers.Conv1D(
+            filters=n_feature_maps, kernel_size=1, padding='same')(x)
         shortcut_y = keras.layers.BatchNormalization()(shortcut_y)
 
         output_block_1 = keras.layers.add([shortcut_y, conv_z])
@@ -108,19 +81,23 @@ class ResNetModel(RainbowModel):
 
         # BLOCK 2
 
-        conv_x = keras.layers.Conv1D(filters=n_feature_maps * 2, kernel_size=8, padding='same')(output_block_1)
+        conv_x = keras.layers.Conv1D(
+            filters=n_feature_maps * 2, kernel_size=8, padding='same')(output_block_1)
         conv_x = keras.layers.BatchNormalization()(conv_x)
         conv_x = keras.layers.Activation('relu')(conv_x)
 
-        conv_y = keras.layers.Conv1D(filters=n_feature_maps * 2, kernel_size=5, padding='same')(conv_x)
+        conv_y = keras.layers.Conv1D(
+            filters=n_feature_maps * 2, kernel_size=5, padding='same')(conv_x)
         conv_y = keras.layers.BatchNormalization()(conv_y)
         conv_y = keras.layers.Activation('relu')(conv_y)
 
-        conv_z = keras.layers.Conv1D(filters=n_feature_maps * 2, kernel_size=3, padding='same')(conv_y)
+        conv_z = keras.layers.Conv1D(
+            filters=n_feature_maps * 2, kernel_size=3, padding='same')(conv_y)
         conv_z = keras.layers.BatchNormalization()(conv_z)
 
         # expand channels for the sum
-        shortcut_y = keras.layers.Conv1D(filters=n_feature_maps * 2, kernel_size=1, padding='same')(output_block_1)
+        shortcut_y = keras.layers.Conv1D(
+            filters=n_feature_maps * 2, kernel_size=1, padding='same')(output_block_1)
         shortcut_y = keras.layers.BatchNormalization()(shortcut_y)
 
         output_block_2 = keras.layers.add([shortcut_y, conv_z])
@@ -128,15 +105,18 @@ class ResNetModel(RainbowModel):
 
         # BLOCK 3
 
-        conv_x = keras.layers.Conv1D(filters=n_feature_maps * 2, kernel_size=8, padding='same')(output_block_2)
+        conv_x = keras.layers.Conv1D(
+            filters=n_feature_maps * 2, kernel_size=8, padding='same')(output_block_2)
         conv_x = keras.layers.BatchNormalization()(conv_x)
         conv_x = keras.layers.Activation('relu')(conv_x)
 
-        conv_y = keras.layers.Conv1D(filters=n_feature_maps * 2, kernel_size=5, padding='same')(conv_x)
+        conv_y = keras.layers.Conv1D(
+            filters=n_feature_maps * 2, kernel_size=5, padding='same')(conv_x)
         conv_y = keras.layers.BatchNormalization()(conv_y)
         conv_y = keras.layers.Activation('relu')(conv_y)
 
-        conv_z = keras.layers.Conv1D(filters=n_feature_maps * 2, kernel_size=3, padding='same')(conv_y)
+        conv_z = keras.layers.Conv1D(
+            filters=n_feature_maps * 2, kernel_size=3, padding='same')(conv_y)
         conv_z = keras.layers.BatchNormalization()(conv_z)
 
         # no need to expand channels because they are equal
@@ -149,7 +129,8 @@ class ResNetModel(RainbowModel):
 
         gap_layer = keras.layers.GlobalAveragePooling1D()(output_block_3)
 
-        output_layer = keras.layers.Dense(n_outputs, activation='softmax')(gap_layer)
+        output_layer = keras.layers.Dense(
+            n_outputs, activation='softmax')(gap_layer)
 
         model = keras.models.Model(inputs=input_layer, outputs=output_layer)
 
@@ -162,7 +143,7 @@ class ResNetModel(RainbowModel):
         windows = []
         recording_sensor_array = (
             recording.sensor_frame.to_numpy()
-        )  # recording_sensor_array[timeaxis/row, sensoraxis/column]
+        )
         activities = recording.activities.to_numpy()
 
         start = 0
@@ -176,17 +157,18 @@ class ResNetModel(RainbowModel):
 
             # has planned window the same activity in the beginning and the end?
             if (
-                len(set(activities[start : (end + 1)])) == 1
+                len(set(activities[start: (end + 1)])) == 1
             ):  # its important that the window is small (otherwise can change back and forth) # activities[start] == activities[end] a lot faster probably
                 window_sensor_array = recording_sensor_array[
-                    start : (end + 1), :
+                    start: (end + 1), :
                 ]  # data[timeaxis/row, featureaxis/column] data[1, 2] gives specific value, a:b gives you an interval
                 activity = activities[start]  # the first data point is enough
                 start += (
                     self.window_size // 2
                 )  # 50% overlap!!!!!!!!! - important for the waste calculation
                 windows.append(
-                    Window(window_sensor_array, int(activity), recording.subject, recording.recording_index)
+                    Window(window_sensor_array, int(activity),
+                           recording.subject, recording.recording_index)
                 )
 
             # if the frame contains different activities or from different objects, find the next start point
@@ -207,6 +189,7 @@ class ResNetModel(RainbowModel):
             activities = recording.activities.to_numpy()
             change_idxs = np.where(activities[:-1] != activities[1:])[0] + 1
             # (overlapping amount self.window_size // 2 from the algorithm!)
+
             def get_n_wasted_timesteps(label_len):
                 return (
                     (label_len - self.window_size) % (self.window_size // 2)
@@ -239,7 +222,8 @@ class ResNetModel(RainbowModel):
         n_total_timesteps = sum(
             map(lambda recording: len(recording.activities), recordings)
         )
-        n_wasted_timesteps = sum(map(n_wasted_timesteps_jens_windowize, recordings))
+        n_wasted_timesteps = sum(
+            map(n_wasted_timesteps_jens_windowize, recordings))
         print(
             f"=> jens_windowize_monitoring (total recording time)\n\tbefore: {to_hours_str(n_total_timesteps)}\n\tafter: {to_hours_str(n_total_timesteps - n_wasted_timesteps)}"
         )
@@ -273,5 +257,4 @@ class ResNetModel(RainbowModel):
 
     def convert(self, windows: "list[Window]") -> "tuple[np.ndarray, np.ndarray]":
         X_train, y_train = super().convert(windows)
-        return X_train, y_train# np.expand_dims(X_train, -1)
-
+        return X_train, y_train

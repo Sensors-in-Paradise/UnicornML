@@ -16,9 +16,7 @@ from utils import settings
 
 # settings.init("sonar")
 # import experiments.sonar_cnn
-    
 
 
 if __name__ == "__main__":
-    import experiments.transferLearningTobi
-
+    import experiments.export_res_net_exp

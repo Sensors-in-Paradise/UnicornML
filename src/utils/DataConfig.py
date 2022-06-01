@@ -15,29 +15,6 @@ import tensorflow as tf
 import math
 
 
-def ffill1D(t):
-    # Find non-NaN values
-    mask = ~tf.math.is_nan(t)
-
-    # Take non-NaN values and precede them with a NaN
-    values = tf.concat([[math.nan], tf.boolean_mask(t, mask)], axis=0)
-
-    # Use cumsum over mask to find the index of the non-NaN value to pick
-    idx = tf.cumsum(tf.cast(mask, tf.int64), axis=0)
-    # Gather values
-    result = tf.gather(values, idx)
-    # Find non-NaN values (if row of tensor started with NaN)
-    result = tf.where(tf.math.is_nan(result), tf.ones_like(result) * 0, result)
-    return result
-
-
-def ffill(t):
-    if len(tf.shape(t)) > 2:
-        return tf.map_fn(fn=ffill, elems=t)
-    else:
-        return tf.map_fn(fn=ffill1D, elems=t)
-
-
 @dataclass
 class DataConfig:
     """
@@ -60,6 +37,9 @@ class DataConfig:
     mean = None
     DATA_CONFIG_METADATA_FILE = "dataConfigMetadata.json"
 
+    def __init__(self, dataset_path: str):
+        self.dataset_path = dataset_path
+
     def load_dataset(self) -> "list[Recording]":
         recordings = self._load_dataset()
 
@@ -69,20 +49,13 @@ class DataConfig:
 
         if variance is None or mean is None:
             startTime = datetime.now()
-            # for recording in recordings:
-            #    recording.sensor_frame = recording.sensor_frame.fillna(
-            #        method="ffill")
-            # sensor_frames = tf.constant(np.concatenate(
-            #    [recording.sensor_frame.to_numpy() for recording in recordings], axis=0))
-            sensor_frames = np.concatenate(
-                [recording.sensor_frame.to_numpy() for recording in recordings], axis=0
-            )
-            nan_mask = np.any(np.isnan(sensor_frames), axis=1)
-            sensor_frames = sensor_frames[~nan_mask]
-
-            sensor_frame_tensor = tf.constant(sensor_frames, dtype=tf.float32)
+            for recording in recordings:
+                recording.sensor_frame = recording.sensor_frame.fillna(
+                    method="ffill")
+            sensor_frames = tf.constant(np.concatenate(
+                [recording.sensor_frame.to_numpy() for recording in recordings], axis=0))
             layer = tf.keras.layers.Normalization(axis=-1)
-            layer.adapt(sensor_frame_tensor)
+            layer.adapt(sensor_frames)
             self.variance = layer.variance
             self.mean = layer.mean
             endTime = datetime.now()
@@ -143,22 +116,19 @@ class DataConfig:
         """
         measures = self._loadMeasuresDict()
         if not measures is None:
-            return np.fromstring(measures["variance"]), np.fromstring(measures["mean"])
+            return np.array(measures["variance"]), np.array(measures["mean"])
         return None, None
 
-    def _saveDataSetMeasures(self, variances, standardDeviations):
+    def _saveDataSetMeasures(self, variances, mean):
         metadata = {}
         identifier = self._getDataConfigIdentifier()
 
         measures = {
-            "variance": np.array_str(np.array(variances)),
-            "mean": np.array_str(np.array(standardDeviations)),
+            "variance": np.array(variances).tolist(),
+            "mean": np.array(mean).tolist(),
         }
-        if os.path.isfile(DataConfig.DATA_CONFIG_METADATA_FILE):
-            metadata = json.load(DataConfig.DATA_CONFIG_METADATA_FILE)
-            metadata[identifier] = measures
-        else:
-            metadata[identifier] = measures
+        metadata = self._loadMetadataDict()
+        metadata[identifier] = measures
         with open(
             DataConfig.DATA_CONFIG_METADATA_FILE, "w", encoding="utf8"
         ) as json_file:
@@ -168,19 +138,26 @@ class DataConfig:
         """
         Returns the metadata json of this data config's metadata as dict
         """
+        metadata = self._loadMetadataDict()
+        identifier = self._getDataConfigIdentifier()
+        if identifier in metadata:
+            return metadata[identifier]
+        return None
+
+    def _loadMetadataDict(self):
+        """
+        Returns the metadata json of this data config's metadata as dict
+        """
         if os.path.isfile(DataConfig.DATA_CONFIG_METADATA_FILE):
             with open(
                 DataConfig.DATA_CONFIG_METADATA_FILE, "r", encoding="utf8"
             ) as json_file:
                 metadata = json.load(json_file)
-
-            identifier = self._getDataConfigIdentifier()
-            if identifier in metadata:
-                return metadata[identifier]
-        return None
+                return metadata
+        return {}
 
     def _getDataConfigIdentifier(self):
-        return type(self).__name__
+        return type(self).__name__ + self.dataset_path
 
 
 class OpportunityConfig(DataConfig):
@@ -188,7 +165,7 @@ class OpportunityConfig(DataConfig):
     timestep_frequency = 30  # Hz
 
     def __init__(self, dataset_path: str):
-        self.dataset_path = dataset_path
+        super().__init__(dataset_path)
 
         self.original_idx_to_activity_idx_map = {
             0: 0,
@@ -229,7 +206,7 @@ class SonarConfig(DataConfig):
     timestep_frequency = 60  # Hz
 
     def __init__(self, dataset_path: str):
-        self.dataset_path = dataset_path
+        super().__init__(dataset_path)
 
         labels = list(
             itertools.chain.from_iterable(
@@ -365,13 +342,10 @@ class SonarConfig(DataConfig):
     def _getDataConfigIdentifier(self):
         return type(self).__name__ + self.dataset_path
 
-    def _getDataConfigIdentifier(self):
-        return type(self).__name__ + self.dataset_path
-
 
 class Sonar22CategoriesConfig(DataConfig):
     def __init__(self, dataset_path: str):
-        self.dataset_path = dataset_path
+        super().__init__(dataset_path)
 
         self.raw_label_to_activity_idx_map = self.category_labels  # no relabeling applied
         self.activity_idx_to_activity_name_map = {

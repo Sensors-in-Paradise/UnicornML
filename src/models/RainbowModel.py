@@ -2,15 +2,14 @@
 
 from gc import callbacks
 import os
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from random import shuffle
-from typing import Any, Union
-
+from typing import Union
 import numpy as np
-import tensorflow as tf  # type: ignore
+import tensorflow as tf
+from loader.preprocessing import replaceNaN_ffill_tf, replaceNaN_ffill_numpy
 from tensorflow.keras.utils import to_categorical  # type: ignore
 from tensorflow.python.saved_model.utils_impl import get_saved_model_pb_path  # type: ignore
-
 import utils.settings as settings
 from utils.Recording import Recording
 from utils.Window import Window
@@ -37,6 +36,7 @@ class RainbowModel(tf.Module):
     n_outputs: Union[int, None] = None
     kwargs = None
     callbacks = []
+
     @abstractmethod
     def __init__(self, **kwargs):
         """
@@ -46,9 +46,17 @@ class RainbowModel(tf.Module):
         they need to be stored as instance variable, that they can be accessed, when needed.
         """
 
-        # self.model = None
-        # assert (self.model is not None)
+        # per feature measures of input distribution
+        self.input_distribution_mean = kwargs["input_distribution_mean"]
+        self.input_distribution_variance = kwargs["input_distribution_variance"]
+
         self.kwargs = kwargs
+
+    def _preprocessing_layer(self, input_layer: tf.keras.layers.Layer) -> tf.keras.layers.Layer:
+        x = tf.keras.layers.Normalization(
+            axis=-1, variance=self.input_distribution_variance, mean=self.input_distribution_mean)(
+            input_layer)
+        return x
 
     # @error_after_seconds(600) # after 10 minutes, something is wrong
     def windowize_convert_fit(self, recordings_train: "list[Recording]") -> None:
@@ -94,6 +102,7 @@ class RainbowModel(tf.Module):
         ), "stride_size has to be set in the constructor of your concrete model class, please"
 
         windows: "list[Window]" = []
+
         for recording in recordings:
             sensor_array = recording.sensor_frame.to_numpy()
             sensor_subarrays = transform_to_subarrays(
@@ -131,23 +140,22 @@ class RainbowModel(tf.Module):
     # The 'train' function takes an input window and a label
     @tf.function(input_signature=[
         tf.TensorSpec(shape=[None, window_size, n_features], dtype=tf.float32),
-        tf.TensorSpec(shape=[None, n_outputs], dtype=tf.float32),  # Binary Classification
+        # Binary Classification
+        tf.TensorSpec(shape=[None, n_outputs], dtype=tf.float32),
     ])
-    def train(self, input_window, label):
-        print("input_window", input_window)
-        print("label", label)
-        #assert (self.model.loss == "categorical_crossentropy")
+    def train(self, input_windows, labels):
+        replaceNaN_ffill_tf(input_windows)
 
         with tf.GradientTape() as tape:
-            predictions = self.model(input_window)
+            predictions = self.model(input_windows)
             print(self.model)
-            loss = self.model.loss(label, predictions)
+            loss = self.model.loss(labels, predictions)
         gradients = tape.gradient(loss, self.model.trainable_variables)
         self.model.optimizer.apply_gradients(
             zip(gradients, self.model.trainable_variables))
         result = {"loss": loss}
         return result
-    
+
     # Fit ----------------------------------------------------------------------
 
     def fit(self, X_train: np.ndarray, y_train: np.ndarray) -> None:
@@ -155,21 +163,21 @@ class RainbowModel(tf.Module):
         Fit the self.model to the data
         """
         assert_type(
-            [(X_train, (np.ndarray, np.generic)), (y_train, (np.ndarray, np.generic))]
+            [(X_train, (np.ndarray, np.generic)),
+             (y_train, (np.ndarray, np.generic))]
         )
         assert (
             X_train.shape[0] == y_train.shape[0]
         ), "X_train and y_train have to have the same length"
-        # print(f"Fitting with class weight: {self.class_weight}")
         history = self.model.fit(
-            X_train,
+            replaceNaN_ffill_numpy(X_train),
             y_train,
             validation_split=0.2,
             epochs=self.n_epochs,
             batch_size=self.batch_size,
             verbose=self.verbose,
             class_weight=self.class_weight,
-            callbacks= callbacks
+            callbacks=callbacks
         )
         self.history = history
 
@@ -178,17 +186,19 @@ class RainbowModel(tf.Module):
         tf.TensorSpec(shape=[None, window_size, n_features], dtype=tf.float32),
     ])
     def infer(self, input_window):
+        replaceNaN_ffill_tf(input_window)
         logits = self.model(input_window)
         probabilities = tf.nn.softmax(logits, axis=-1)
         return {
             "output": probabilities,
             "logits": logits,
         }
+
     def predict(self, X_test: np.ndarray) -> np.ndarray:
         """
         gets a list of windows and returns a list of prediction_vectors
         """
-        return self.model.predict(X_test)
+        return self.model.predict(replaceNaN_ffill_numpy(X_test))
 
     def export(self, path: str) -> None:
         """
@@ -202,7 +212,7 @@ class RainbowModel(tf.Module):
         create_folders_in_path(export_path_raw_model)
 
         # 1/3 Export raw model ------------------------------------------------------------
-        tf.saved_model.save(self.model,export_path_raw_model,  signatures={
+        tf.saved_model.save(self.model, export_path_raw_model,  signatures={
             'train':
                 self.train.get_concrete_function(),
             'infer':
@@ -213,15 +223,13 @@ class RainbowModel(tf.Module):
                 self.restore.get_concrete_function(),
         })
 
-        # 2/3 Export .h5 model ------------------------------------------------------------
-        # self.model.save(export_path + "/" + self.model_name + ".h5", save_format="h5")
-
-        # 3/3 Export .h5 model ------------------------------------------------------------
-        converter = tf.lite.TFLiteConverter.from_saved_model(export_path_raw_model)
+        # 3/3 Export tflite model ------------------------------------------------------------
+        converter = tf.lite.TFLiteConverter.from_saved_model(
+            export_path_raw_model)
 
         converter.optimizations = [
             tf.lite.Optimize.DEFAULT
-        ]  # Refactoring Idea: Optimizations for new tensorflow version
+        ]
         converter.experimental_new_converter = True
         converter.target_spec.supported_ops = [
             tf.lite.OpsSet.TFLITE_BUILTINS,
@@ -229,7 +237,7 @@ class RainbowModel(tf.Module):
         ]
         converter.experimental_enable_resource_variables = True
         tflite_model = converter.convert()
-        with open(os.path.join(export_path,f"{self.model_name}.tflite"), "wb") as f:
+        with open(os.path.join(export_path, f"{self.model_name}.tflite"), "wb") as f:
             f.write(tflite_model)
 
         print("Export finished")
@@ -248,7 +256,8 @@ class RainbowModel(tf.Module):
     @tf.function(input_signature=[tf.TensorSpec(shape=[], dtype=tf.string)])
     def save(self, checkpoint_path):
         tensor_names = [weight.name for weight in self.model.weights]
-        tensors_to_save = [weight.read_value() for weight in self.model.weights]
+        tensors_to_save = [weight.read_value()
+                           for weight in self.model.weights]
         tf.raw_ops.Save(
             filename=checkpoint_path, tensor_names=tensor_names,
             data=tensors_to_save, name='save')

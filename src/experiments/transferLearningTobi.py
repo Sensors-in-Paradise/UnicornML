@@ -37,7 +37,7 @@ Number of recordings per person
 
 # Sonar22CategoriesConfig(dataset_path='/dhc/groups/bp2021ba1/data/filtered_dataset_without_null')#
 data_config = OpportunityConfig(
-    dataset_path='/dhc/groups/bp2021ba1/data/opportunity-dataset')
+    dataset_path='../../data/opportunity-dataset')
 settings.init(data_config)
 
 
