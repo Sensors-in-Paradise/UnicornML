@@ -63,11 +63,17 @@ class DataConfig:
         print("Calculating mean and variance of whole dataset once. This can take a while...")
         variance, mean = self._loadDataSetMeasures()
 
-        if variance is None or mean is None:  
+        if variance is None or mean is None:
             startTime = datetime.now()
-            sensor_frames = ffill(tf.constant(np.concatenate([recording.sensor_frame.to_numpy() for recording in recordings], axis=0)))
+            sensor_frames = np.concatenate(
+                [recording.sensor_frame.to_numpy() for recording in recordings], axis=0
+            )
+            nan_mask = np.any(np.isnan(sensor_frames), axis=1)
+            sensor_frames = sensor_frames[~nan_mask]
+
+            sensor_frame_tensor = tf.constant(sensor_frames, dtype=tf.float32)
             layer = tf.keras.layers.Normalization(axis=-1)
-            layer.adapt(sensor_frames)
+            layer.adapt(sensor_frame_tensor)
             self.variance = layer.variance
             self.mean = layer.mean
             endTime = datetime.now()
@@ -133,24 +139,34 @@ class DataConfig:
     def _saveDataSetMeasures(self, variances, standardDeviations):
         metadata = {}
         identifier = self._getDataConfigIdentifier()
-        measures = {"variance": np.array_str(variances), "mean": np.array_str(standardDeviations)}
+        measures = {
+            "variance": np.array_str(np.array(variances)),
+            "mean": np.array_str(np.array(standardDeviations)),
+        }
         if os.path.isfile(DataConfig.DATA_CONFIG_METADATA_FILE):
             metadata = json.load(DataConfig.DATA_CONFIG_METADATA_FILE)
             metadata[identifier] = measures
         else:
             metadata[identifier] = measures
-        json.dump(metadata, DataConfig.DATA_CONFIG_METADATA_FILE)
+        with open(
+            DataConfig.DATA_CONFIG_METADATA_FILE, "w", encoding="utf8"
+        ) as json_file:
+            json.dump(metadata, json_file, indent=5)
 
     def _loadMeasuresDict(self):
         """
         Returns the metadata json of this data config's metadata as dict
         """
         if os.path.isfile(DataConfig.DATA_CONFIG_METADATA_FILE):
-            metadata = json.load(DataConfig.DATA_CONFIG_METADATA_FILE)
+            with open(
+                DataConfig.DATA_CONFIG_METADATA_FILE, "r", encoding="utf8"
+            ) as json_file:
+                metadata = json.load(json_file)
+
             identifier = self._getDataConfigIdentifier()
             if identifier in metadata:
                 return metadata[identifier]
-        return None    
+        return None
 
     def _getDataConfigIdentifier(self):
         return type(self).__name__
