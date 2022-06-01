@@ -1,166 +1,210 @@
 
+from utils.Recording import Recording
+import os
+import pandas as pd
+import json
 
-def deleteConsecutives(series):
-    filtered_items = []
-    last_item = None
-    for i, item in series.iteritems():
-        if item != last_item:
-            filtered_items.append(item)
-        last_item = item
-    return filtered_items
+NULL_ACTIVITY_LABEL = "null - activity"
+def get_poseframe(recording: Recording, recordings_root: str):
+    try:
+        metadata_file_path = os.path.join(recordings_root, recording.recording_folder, 'metadata.json')
+        pose_startTime, pose_time_second_activity = _extract_metadata_information(metadata_file_path)
+    except Exception as e:
+        print(f"Recording {recording.recording_folder}: {e} Returning empty pose frame (!)")
+        return pd.DataFrame()
+    except:
+        print(f"Recording {recording.recording_folder}: Metadata Corrupt. Returning empty pose frame (!)")
+        return pd.DataFrame()
 
-def getPoseFilesWithMetadata(dataset_path: str, activity_mapping = None):
-    from utils.file_functions import get_subfolder_names
-    import json
-    import os
-    import pandas as pd
+    pose_file_path = os.path.join(recordings_root, recording.recording_folder, 'poseSequence.csv')
+    pose_frame = pd.read_csv(
+        pose_file_path, skiprows=_get_pose_sequence_headersize(pose_file_path)
+    )
+    pose_frame = _adjust_columns_poseframe(
+                pose_frame
+    )
 
-    recording_folder_names = get_subfolder_names(dataset_path)
-    recording_folder_names = [
-        os.path.join(dataset_path, recording_folder_name)
-        for recording_folder_name in recording_folder_names
-    ]
-    pose_file_metadata_tuples = []
-    for recording_folder_path in recording_folder_names:
-        for file_name in os.listdir(recording_folder_path):
-            is_file = os.path.isfile(os.path.join(recording_folder_path, file_name))
-            if is_file and file_name.endswith("poseSequence.csv"):
-                pose_file_name = os.path.join(recording_folder_path, file_name)
-            if is_file and file_name.endswith("metadata.json"):
-                metadata_file_name = os.path.join(recording_folder_path, file_name)
-            if is_file and file_name.endswith(".csv") and not file_name.endswith("poseSequence.csv")
-                sensor_file_name = os.path.join(recording_folder_path, file_name)
+    try:
+        # TODO maybe use starttimestamp instead of second activity time and ignore potential shift. 
+        absolute_frame_start_time = _get_absolute_start_time(recording, pose_startTime, pose_time_second_activity) 
+        pose_frame = _sampleUp_poseframe(
+                    pose_frame, recording.time_frame, absolute_frame_start_time 
+        )
+    except Exception as e:
+        print(f"Recording {recording.recording_folder}: {e} Returning empty pose frame (!)")
+        return pd.DataFrame()
+    except:
+        print(f"Recording {recording.recording_folder}: Pose Frame failed to get sampled up. Returning empty pose frame (!)")
+        return pd.DataFrame()
 
-        try:
-            sensor_frame = pd.read_csv(
-                sensor_file_name, skiprows=8
-            )
+    pose_frame = _delete_timestamps_poseframe(pose_frame)
+    
+    return pose_frame
 
-            with open(metadata_file_name) as metadata_file:
-                metadata = json.load(metadata_file)
-            
-            activities = list(map(
-                lambda activityDict: activityDict["label"],
-                metadata["activities"]
-            ))
+def _extract_metadata_information(metadata_file_path):
+    with open(metadata_file_path) as metadata_file:
+        metadata = json.load(metadata_file)
 
-            if activity_mapping != None: 
-                activities = list(map(
-                    lambda activity: -1 if activity not in activity_mapping.keys() else activity_mapping[activity],
-                    activities
-                ))
-            metadata = {
-                "activities": activities,
-                "startTimestamp": metadata["startTimeStamp"],
-                "subject": metadata["person"],
-                "numLines": sensor_frame.shape[0],
+        null_filtered_activities = list(filter(lambda act: act["label"] != NULL_ACTIVITY_LABEL, metadata['activities']))
 
-            }
-            pose_file_metadata_tuples.append((pose_file_name, metadata))
-        except:
-            raise Exception(f"Recording with missing metadata or poseSequence found: {recording_folder_path}")
-    return pose_file_metadata_tuples
-
-
-    #         headersize = 0
-    #     with open(pose_file_path) as csvFile:
-    #         line = csvFile.readline()[:-1].split(',')
-    #         while len(line) > 0 and line[0] != 'TimeStamp':
-    #             headersize += 1
-    #             line = csvFile.readline().split(',')
-
-    #     pose_frame = pd.read_csv(
-    #         pose_file_name, headersize
-    #     )
-
-    #     assert recording_frame != None, f"Recording without sensor data found: {recording_folder_path}"
-
-    #     pose_frame = XSensRecordingReader.__adjust_columns_poseframe(
-    #                 pose_frame
-    #     )
-
-    #     pose_frame = XSensRecordingReader.__sampleUp_poseframe(
-    #                 recording_frame, time_frame
-    #     )
-
-
-    #     pose_frame = XSensRecordingReader.__delete_timestamps_poseframe(pose_frame)
-
-    #     return pose_frame 
-
-    # @staticmethod 
-    # def __delete_timestamps_poseframe(frame): 
-    #     if "TimeStamp" in frame.columns:
-    #         del frame["TimeStamp"]
-
-    #     return frame
-
-    # @staticmethod
-    # def _get_interpolated_pose_row(first_row, second_row, factor):
-    #     return dict(map(
-    #          lambda f_1, f_2: (f_1[0], f_1[1] + ((f_2[1] - f_1[1]) * factor)), 
-    #         first_row.itertuples(), 
-    #         second_row.itertuples()))
-
-    # @staticmethod
-    # def __sampleUp_poseframe(pose_frame, time_frame):
-    #     new_pose_frame = pd.DataFrame()
-    #     feature_columns = pose_frame.columns
-    #     feature_columns = feature_columns.remove("TimeStamp")
-    #     #new_pose_frame[columns] = time_frame.apply(lambda timeRow: _get_interpolated_pose_row(timeRow, pose_frame))
-
-    #     CRITICAL_TIME_MARGIN = 1000
-    #     NULL_ROW = lambda: dict([(feature, -1) for feature in feature_columns])
-
-    #     pose_iter = 0
-    #     for timeRow in time_frame.iterrows():
-    #         timestamp = timeRow["SampleTimeFine"]
-            
-    #         pose_timestamp = pose_frame.iloc[pose_iter, ["TimeStamp"]]
-    #         try: 
-    #             next_pose_timestamp = pose_frame.iloc[pose_iter+1, ["TimeStamp"]]
-    #         except: 
-    #             new_pose_frame.append(NULL_ROW(), ignore_index=True)
-    #             continue
-
-    #         if timestamp < pose_timestamp:
-    #             if pose_iter == 0: 
-    #                 new_pose_frame.append(NULL_ROW(), ignore_index=True)
-    #                 continue
-
-    #             else:
-    #                 raise Exception
-            
-    #         else:
-    #             while next_pose_timestamp <= timestamp:
-    #                 pose_iter += 1
-    #                 next_pose_timestamp = pose_frame.iloc[pose_iter+1, ["TimeStamp"]]
-
-    #             if next_pose_timestamp - pose_timestamp > CRITICAL_TIME_MARGIN:
-    #                 new_pose_frame.append(NULL_ROW(), ignore_index=True)
-    #                 continue
-    #             else:
-    #                 interpolate_factor = (timestamp - pose_timestamp) / (next_pose_timestamp - pose_timestamp)
-    #                 feature_row = XSensRecordingReader.get_interpolated_pose_row(
-    #                     pose_frame[pose_iter, feature_columns], 
-    #                     pose_frame[pose_iter+1, feature_columns],
-    #                     interpolate_factor
-    #                 )
-    #                 new_pose_frame.append(feature_row)
+        pose_startTime = null_filtered_activities[0]["timeStarted"]
         
-    #     return new_pose_frame
+        pose_time_second_activity = None
+        for activity in null_filtered_activities:
+            #skipping the first activities if they have the same label
+            if activity["label"] != null_filtered_activities[0]["label"]:
+                pose_time_second_activity = activity["timeStarted"]
+                break
+    
+    if pose_time_second_activity == None:
+        raise Exception("Metadata has less than 2 Activities.") 
+    return pose_startTime, pose_time_second_activity
 
-    # @staticmethod
-    # def __adjust_columns_poseframe(frame):
-    #     if "Confidence" in frame.columns:
-    #         del frame["Status"]
+def _get_pose_sequence_headersize(pose_file_path: str) -> int:
+    headersize = 0
+    with open(pose_file_path) as csvFile:
+        line = csvFile.readline()[:-1].split(',')
+        while len(line) > 0 and line[0] != 'TimeStamp':
+            headersize += 1
+            line = csvFile.readline().split(',')
+    return headersize
 
-    #     # map head points to one
-    #     # map weist points to one
+ 
+def _delete_timestamps_poseframe(frame): 
+    if "TimeStamp" in frame.columns:
+        del frame["TimeStamp"]
 
-    #     # Convert all frame values to numbers (otherwise nans might not be read correctly!)
-    #     frame = frame.apply(pd.to_numeric, errors='coerce').astype({"TimeStamp": "int64"})
-    #     #  frame = XSensRecordingReader.__remove_SampleTimeFine_overflow(frame)
-    #     # XSensRecordingReader.__add_suffix_except_SampleTimeFine(frame, suffix)
+    return frame
+
+def _get_absolute_start_time(recording: Recording, pose_start_time, pose_time_second_activity):
+    activities = recording.activities
+    first_activity = activities[0]
+    for i in range(len(activities)-1):
+        if first_activity != activities[i]:
+            break
+        if i == len(activities)-1:
+            raise Exception("Recording Frame has only ONE activity")
+
+    frame_first_time = recording.time_frame[0]
+    frame_time_second_activity = recording.time_frame[i]
+    frame_diff = round((frame_time_second_activity - frame_first_time) / 1000)
+
+    pose_diff = pose_time_second_activity - pose_start_time
+    try:
+        assert abs(frame_diff - pose_diff) < 1000, f"Second activity of recording {recording.recording_folder} significantly shifted"
+    except:
+        raise Exception(f"Activity TimeStamps of Frame & Metadata significantly shifted.")
+
+    absolute_frame_start_time = pose_time_second_activity - frame_diff
+    return absolute_frame_start_time
+
+
+
+def _get_interpolated_pose_row(first_row, second_row, factor):
+    return dict(map(
+         lambda f_1, f_2: (f_1[0], f_1[1] + ((f_2[1] - f_1[1]) * factor)), 
+        list(first_row.items()), 
+        list(second_row.items())))
+
+def _get_absolute_frame_time(relative_time, relative_start_time, absolute_start_time):
+    relative_time = round((relative_time - relative_start_time) / 1000)
+
+    return absolute_start_time + relative_time
+
+def _sampleUp_poseframe(pose_frame, time_frame, absolute_frame_start_time):
+    new_pose_frame = []
+    feature_columns = list(pose_frame.columns)
+    feature_columns.remove("TimeStamp")
+    #new_pose_frame[columns] = time_frame.apply(lambda timeRow: _get_interpolated_pose_row(timeRow, pose_frame))
+
+    CRITICAL_TIME_MARGIN = 1000
+    NULL_ROW = lambda: dict([(feature, -1) for feature in feature_columns])
+    relative_frame_start_time = time_frame[0]
+    col_index_timestamp = pose_frame.columns.get_loc("TimeStamp")
+
+
+    pose_iter = -1
+    pose_timestamp = next_pose_timestamp = 0
+    for _, sample_time_fine in time_frame.iteritems():
+        timestamp = _get_absolute_frame_time(sample_time_fine, relative_frame_start_time, absolute_frame_start_time)
         
-    #     return frame 
+        try: 
+            while next_pose_timestamp <= timestamp:
+                pose_iter += 1       
+            
+                pose_timestamp = pose_frame.iloc[pose_iter, col_index_timestamp]
+                next_pose_timestamp = pose_frame.iloc[pose_iter+1, col_index_timestamp]
+        except: 
+            new_pose_frame.append(NULL_ROW()) #, ignore_index=True)
+            continue
+
+        if timestamp < pose_timestamp:
+            # beginning: timestamp before first pose
+            if pose_iter == 0: 
+                new_pose_frame.append(NULL_ROW()) #, ignore_index=True)
+                continue
+            # undefined state: timestamp got smaller
+            else:
+                raise Exception("Timestamp to low")
+        
+        else:
+            # significant gap between two poses 
+            if next_pose_timestamp - pose_timestamp > CRITICAL_TIME_MARGIN:
+                new_pose_frame.append(NULL_ROW()) #, ignore_index=True)
+                continue
+            # normal case: timestamp between two poses
+            else:
+                interpolate_factor = (timestamp - pose_timestamp) / (next_pose_timestamp - pose_timestamp)
+                feature_row = _get_interpolated_pose_row(
+                    pose_frame.iloc[pose_iter].loc[feature_columns], 
+                    pose_frame.iloc[pose_iter+1].loc[feature_columns],
+                    interpolate_factor
+                )
+                new_pose_frame.append(feature_row) #, ignore_index=True)
+                
+    return pd.DataFrame.from_dict(new_pose_frame)
+
+def _adjust_columns_poseframe(frame):
+    if "Confidence" in frame.columns:
+        del frame["Confidence"]
+
+    # TODO kick out low confidences 
+
+    frame = _map_head_points(frame)
+
+    frame = _map_hip_points(frame)
+
+    # Convert all frame values to numbers (otherwise nans might not be read correctly!)
+    frame = frame.apply(pd.to_numeric, errors='coerce').astype({"TimeStamp": "int64"})
+    
+    return frame 
+
+def _map_head_points(frame):
+    head_columns = ["NOSE", "LEFT_EYE", "RIGHT_EYE","LEFT_EAR", "RIGHT_EAR"]
+
+    head_columns_X = [f"{column_name}_X" for column_name in head_columns]
+    frame["HEAD_X"] = frame[head_columns_X].mean(axis=1)
+
+    head_columns_Y = [f"{column_name}_Y" for column_name in head_columns]
+    frame["HEAD_Y"] = frame[head_columns_Y].mean(axis=1)
+
+    for column in head_columns_X + head_columns_Y:
+        if column in frame.columns:
+            del frame[column]
+    
+    return frame 
+
+def _map_hip_points(frame):
+    hip_columns = ["LEFT_HIP", "RIGHT_HIP"]
+
+    hip_columns_X = [f"{column_name}_X" for column_name in hip_columns]
+    frame["WAIST_X"] = frame[hip_columns_X].mean(axis=1)
+
+    hip_columns_Y = [f"{column_name}_Y" for column_name in hip_columns]
+    frame["WAIST_Y"] = frame[hip_columns_Y].mean(axis=1)
+
+    for column in hip_columns_X + hip_columns_Y:
+        if column in frame.columns:
+            del frame[column]
+    
+    return frame

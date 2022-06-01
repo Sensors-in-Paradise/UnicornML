@@ -29,7 +29,8 @@ class Recording:
         subject: str,
         recording_index: int,
         sensor_frame: pd.DataFrame = pd.DataFrame(),
-        pose_frame: pd.DataFrame = pd.DataFrame()
+        pose_frame: pd.DataFrame = pd.DataFrame(),
+        recording_folder: str = None
     ) -> None:
         assert_type([
             (time_frame, pd.Series),
@@ -37,7 +38,8 @@ class Recording:
             (subject, str),
             (recording_index, int),
             (sensor_frame, pd.DataFrame),
-            (pose_frame, pd.DataFrame)
+            (pose_frame, pd.DataFrame),
+            (recording_folder, str)
         ])
         
         print(activities[0])
@@ -51,3 +53,4 @@ class Recording:
         self.activities = activities
         self.subject = subject
         self.recording_index = recording_index
+        self.recording_folder = recording_folder

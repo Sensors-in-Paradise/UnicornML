@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 from utils.Recording import Recording
+import re
 
 def save_recordings(recordings: 'list[Recording]', path: str) -> None:
     """
@@ -46,9 +47,10 @@ def load_recordings(path: str, activityLabelToIndexMap: dict, limit: int = None)
         activities = recording_dataframe.loc[:, 'activity'].map(lambda label: activityLabelToIndexMap[label])
         sensor_frame = recording_dataframe.loc[:, 
             recording_dataframe.columns.difference(['SampleTimeFine', 'activity'])]
-        subject = file.split('_')[1]
+        subject = re.split('_|\.', file)[1]
+        recording_folder_name = re.split('_|\.', file)[2]
 
-        recordings.append(Recording( time_frame, activities, subject, index,sensor_frame))
+        recordings.append(Recording(time_frame, activities, subject, index, sensor_frame, recording_folder=recording_folder_name))
 
     print(f'Loaded {len(recordings)} recordings from {path}')
     

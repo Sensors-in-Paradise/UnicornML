@@ -1,0 +1,143 @@
+/dhc/groups/bp2021ba1/data/lab_data/1652085453257/poseSequence.csv
+bett machen, umkleiden         bett machen, umkleiden
+Pose Frame added to Recording 1/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651673896419/poseSequence.csv
+bett machen, umkleiden         bett machen, umkleiden
+Pose Frame added to Recording 2/51  
+/dhc/groups/bp2021ba1/data/lab_data/1652878074983/poseSequence.csv
+bett machen, umkleiden         bett beziehen, umkleiden
+Pose Frame added to Recording 3/51  
+Recording Metadata Corrupt: 1652429334344 or only ONE activity. Returning empty pose frame (!)
+Pose Frame added to Recording 4/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651566794296/poseSequence.csv
+aufräumen, bett machen         aufräumen, bett machen
+Pose Frame added to Recording 5/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653467107120/poseSequence.csv
+bett machen, aufräumen         bett machen, aufräumen
+Pose Frame added to Recording 6/51  
+/dhc/groups/bp2021ba1/data/lab_data/1652086187708/poseSequence.csv
+aufräumen, essen reichen         aufräumen, essen reichen
+Pose Frame added to Recording 7/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651225541980/poseSequence.csv
+bett machen, umkleiden         bett machen, umkleiden
+Pose Frame added to Recording 8/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651152283882/poseSequence.csv
+umkleiden, gesamtwaschen im bett         umkleiden, gesamtwaschen
+Pose Frame added to Recording 9/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653481329073/poseSequence.csv
+getränke ausschenken, aufwischen (staub)         getränke ausschenken, aufwischen (staub)
+Pose Frame added to Recording 10/51  
+/dhc/groups/bp2021ba1/data/lab_data/1652869027863/poseSequence.csv
+bett machen, umkleiden         bett machen, umkleiden
+Pose Frame added to Recording 11/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651674660480/poseSequence.csv
+Pose Frame added to Recording 12/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653480087545/poseSequence.csv
+Pose Frame added to Recording 13/51  
+Recording Metadata Corrupt: 1651674075450 or only ONE activity. Returning empty pose frame (!)
+Pose Frame added to Recording 14/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653471714380/poseSequence.csv
+aufräumen, medikamente stellen         aufräumen, aufräumen
+Pose Frame added to Recording 15/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651154555588/poseSequence.csv
+aufräumen, umkleiden         aufräumen, umkleiden
+Pose Frame added to Recording 16/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651147138832/poseSequence.csv
+aufräumen, gesamtwaschen im bett         aufräumen, gesamtwaschen
+Pose Frame added to Recording 17/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653465446990/poseSequence.csv
+getränke ausschenken, aufräumen         getränke ausschenken, aufräumen
+Pose Frame added to Recording 18/51  
+/dhc/groups/bp2021ba1/data/lab_data/1652428200498/poseSequence.csv
+Pose Frame added to Recording 19/51  
+/dhc/groups/bp2021ba1/data/lab_data/1652868344398/poseSequence.csv
+bett machen, umkleiden         bett machen, umkleiden
+Pose Frame added to Recording 20/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653479496235/poseSequence.csv
+rollstuhl transfer, rollstuhl schieben         rollstuhl transfer, rollstuhl transfer
+Pose Frame added to Recording 21/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653484242836/poseSequence.csv
+gesamtwaschen im bett, umkleiden         gesamtwaschen im bett, umkleiden
+Pose Frame added to Recording 22/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651065958950/poseSequence.csv
+bett machen, gesamtwaschen im bett         bett machen, gesamtwaschen im bett
+Pose Frame added to Recording 23/51  
+/dhc/groups/bp2021ba1/data/lab_data/1652869322733/poseSequence.csv
+bett machen, umkleiden         bett machen, umkleiden
+Pose Frame added to Recording 24/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653485032057/poseSequence.csv
+Pose Frame added to Recording 25/51  
+/dhc/groups/bp2021ba1/data/lab_data/1652102976810/poseSequence.csv
+aufräumen, bett machen         aufräumen, bett machen
+Pose Frame added to Recording 26/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653470380045/poseSequence.csv
+medikamente stellen, aufräumen         medikamente stellen, aufräumen
+Pose Frame added to Recording 27/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651221686939/poseSequence.csv
+gesamtwaschen im bett, umkleiden         gesamtwaschen im bett, umkleiden
+Pose Frame added to Recording 28/51  
+Recording Metadata Corrupt: 1651149389351 or only ONE activity. Returning empty pose frame (!)
+Pose Frame added to Recording 29/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651139232298/poseSequence.csv
+bett machen, umkleiden         bett machen, umkleiden
+Pose Frame added to Recording 30/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653468003340/poseSequence.csv
+bett machen, waschen am waschbecken         bett machen, hautpflege
+Pose Frame added to Recording 31/51  
+/dhc/groups/bp2021ba1/data/lab_data/1652710416778/poseSequence.csv
+bett machen, umkleiden         bett beziehen, umkleiden
+Pose Frame added to Recording 32/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651152887499/poseSequence.csv
+Pose Frame added to Recording 33/51  
+/dhc/groups/bp2021ba1/data/lab_data/1652085113670/poseSequence.csv
+aufräumen, essen reichen         aufräumen, essen reichen
+Pose Frame added to Recording 34/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651223183731/poseSequence.csv
+umkleiden, gesamtwaschen im bett         umkleiden, gesamtwaschen im bett
+Pose Frame added to Recording 35/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653468941680/poseSequence.csv
+aufräumen, bett machen         aufräumen, bett machen
+Pose Frame added to Recording 36/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651565920786/poseSequence.csv
+bett machen, umkleiden         bett machen, umkleiden
+Pose Frame added to Recording 37/51  
+/dhc/groups/bp2021ba1/data/lab_data/1652708794017/poseSequence.csv
+bett machen, umkleiden         bett machen, umkleiden
+Pose Frame added to Recording 38/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651567699911/poseSequence.csv
+aufräumen, gesamtwaschen im bett         aufräumen, gesamtwaschen im bett
+Pose Frame added to Recording 39/51  
+/dhc/groups/bp2021ba1/data/lab_data/1652431073226/poseSequence.csv
+rollstuhl transfer, gesamtwaschen im bett         rollstuhl transfer, gesamtwaschen im bett
+Pose Frame added to Recording 40/51  
+Recording Metadata Corrupt: 1653479275869 or only ONE activity. Returning empty pose frame (!)
+Pose Frame added to Recording 41/51  
+Recording Metadata Corrupt: 1651149014709 or only ONE activity. Returning empty pose frame (!)
+Pose Frame added to Recording 42/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651674149525/poseSequence.csv
+waschen am waschbecken, umkleiden         hautpflege, umkleiden
+Pose Frame added to Recording 43/51  
+/dhc/groups/bp2021ba1/data/lab_data/1652432054525/poseSequence.csv
+rollstuhl transfer, gesamtwaschen im bett         rollstuhl transfer, gesamtwaschen im bett
+Pose Frame added to Recording 44/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653466299712/poseSequence.csv
+aufräumen, bett machen         aufräumen, bett machen
+Pose Frame added to Recording 45/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653483997299/poseSequence.csv
+umkleiden, gesamtwaschen im bett         umkleiden, gesamtwaschen im bett
+Pose Frame added to Recording 46/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651140012109/poseSequence.csv
+bett machen, gesamtwaschen im bett         bett machen, gesamtwaschen
+Pose Frame added to Recording 47/51  
+/dhc/groups/bp2021ba1/data/lab_data/1651153453225/poseSequence.csv
+bett machen, umkleiden         bett machen, umkleiden
+Pose Frame added to Recording 48/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653477482139/poseSequence.csv
+getränke ausschenken, umkleiden         getränke ausschenken, umkleiden
+Pose Frame added to Recording 49/51  
+/dhc/groups/bp2021ba1/data/lab_data/1653463600238/poseSequence.csv
+aufräumen, aufwischen (staub)         aufräumen, aufwischen (staub)
+Pose Frame added to Recording 50/51  
+/dhc/groups/bp2021ba1/data/lab_data/1652101854919/poseSequence.csv
+aufräumen, bett machen         aufräumen, bett machen
+Pose Frame added to Recording 51/51  
