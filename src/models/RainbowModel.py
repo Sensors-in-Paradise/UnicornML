@@ -174,7 +174,7 @@ class RainbowModel(tf.Module):
             }
             callbacks = [wandb.keras.WandbCallback()]
 
-        history = self.model.fit(
+        self.history = self.model.fit(
             replaceNaN_ffill_numpy(X_train),
             y_train,
             validation_split=self.validation_split,
@@ -184,7 +184,6 @@ class RainbowModel(tf.Module):
             class_weight=self.class_weight,
             callbacks=callbacks
         )
-        self.history = history
 
     # Predict ------------------------------------------------------------------------
     @tf.function(input_signature=[
