@@ -52,14 +52,13 @@ recordings = settings.DATA_CONFIG.load_dataset()  # limit=75
 print("Variance", data_config.variance)
 print("Mean", data_config.mean)
 
-exit(1)
 # Preprocess
 recordings = Preprocessor().our_preprocess(recordings)
 preprocess_model = ResNetModel().prepare(recordings)
 normalization_layer = preprocess_model.normalization_layer
 
 
-def split_list_by_people(recordings: "list[Recording]", peopleForListA: "list[str]") -> tuple[np.ndarray, np.ndarray]:
+def split_list_by_people(recordings: "list[Recording]", peopleForListA: "list[str]") -> "tuple[np.ndarray, np.ndarray]":
     """ Splits the recordings into a tuple of a sublist of recordings of people in peopleForListA and the recordings of other people"""
     return np.array(list(filter(lambda recording: recording.subject in peopleForListA, recordings))), np.array(list(filter(lambda recording: recording.subject not in peopleForListA, recordings)))
 
@@ -172,14 +171,14 @@ def getMeanCountDifferenceFromMeanActivityCount(yTrue) -> float:
     return diffSum / len(activityCounts)
 
 
-def get_people_in_recordings(recordings: "list[Recording]") -> list[str]:
+def get_people_in_recordings(recordings: "list[Recording]") -> "list[str]":
     people = set()
     for recording in recordings:
         people.add(recording.subject)
     return list(people)
 
 
-def evaluate(model: "RainbowModel", X_test: np.ndarray, y_test_true: np.ndarray, confusionMatrixFileName=None, confusionMatrixTitle="") -> tuple[float, float, float, np.ndarray]:
+def evaluate(model: "RainbowModel", X_test: np.ndarray, y_test_true: np.ndarray, confusionMatrixFileName=None, confusionMatrixTitle="") -> "tuple[float, float, float, np.ndarray]":
     y_test_pred = model.predict(X_test)
     acc = accuracy(y_test_pred, y_test_true)
     if confusionMatrixFileName:
@@ -211,7 +210,7 @@ def freezeDenseLayers(model: RainbowModel):
         layer.trainable = type(layer) == Dense
 
 
-def getAveragesOfAttributesInDicts(dicts: list[dict[str, float]]) -> dict[str, float]:
+def getAveragesOfAttributesInDicts(dicts: "list[dict[str, float]]") -> "dict[str, float]":
     result = {}
     for d in dicts:
         for key in d:

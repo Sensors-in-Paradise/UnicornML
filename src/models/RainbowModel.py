@@ -40,10 +40,16 @@ class RainbowModel(tf.Module):
     @abstractmethod
     def __init__(self, **kwargs):
         """
-        Builds a model, assigns it to self.model = ...
+        Child classes should build a model, assign it to self.model = ...
         It can take hyper params as arguments that are intended to be varied in the future.
         If hyper params dont directly influence the model creation (e.g. meant for normalisation),
         they need to be stored as instance variable, that they can be accessed, when needed.
+
+        Base parameters:
+        - `input_distribution_mean` - array of float values: mean of distribution of each feature
+        - `input_distribution_variance` - array of float values: variance of distribution of each feature
+        --> These parameters will be used by the normalization layer (accessible by the function _preprocessing_layer
+            in the child classes _create_model method)
         """
 
         # per feature measures of input distribution
@@ -58,7 +64,6 @@ class RainbowModel(tf.Module):
             input_layer)
         return x
 
-    # @error_after_seconds(600) # after 10 minutes, something is wrong
     def windowize_convert_fit(self, recordings_train: "list[Recording]") -> None:
         """
         For a data efficient comparison between models, the preprocessed data for
@@ -76,9 +81,6 @@ class RainbowModel(tf.Module):
     def windowize_convert(
         self, recordings_train: "list[Recording]", should_shuffle=True
     ) -> "tuple[np.ndarray,np.ndarray]":
-        """
-        shuffles the windows
-        """
         windows_train = self.windowize(recordings_train)
         if should_shuffle:
             shuffle(
@@ -211,7 +213,7 @@ class RainbowModel(tf.Module):
         export_path_raw_model = os.path.join(export_path, "raw_model")
         create_folders_in_path(export_path_raw_model)
 
-        # 1/3 Export raw model ------------------------------------------------------------
+        # 1/2 Export raw model ------------------------------------------------------------
         tf.saved_model.save(self.model, export_path_raw_model,  signatures={
             'train':
                 self.train.get_concrete_function(),
@@ -223,7 +225,7 @@ class RainbowModel(tf.Module):
                 self.restore.get_concrete_function(),
         })
 
-        # 3/3 Export tflite model ------------------------------------------------------------
+        # 2/2 Convert raw model to tflite model -------------------------------------------
         converter = tf.lite.TFLiteConverter.from_saved_model(
             export_path_raw_model)
 
