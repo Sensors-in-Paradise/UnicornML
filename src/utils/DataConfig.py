@@ -40,8 +40,8 @@ class DataConfig:
     def __init__(self, dataset_path: str):
         self.dataset_path = dataset_path
 
-    def load_dataset(self) -> "list[Recording]":
-        recordings = self._load_dataset()
+    def load_dataset(self, **kwargs) -> "list[Recording]":
+        recordings = self._load_dataset(**kwargs)
 
         print(
             "Calculating mean and variance of whole dataset once. This can take a while...")

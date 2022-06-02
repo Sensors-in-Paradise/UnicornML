@@ -26,7 +26,7 @@ from tensorflow.keras.layers import (
 class SenselessDeepConvLSTM(RainbowModel):
     """
     https://github.com/STRCWearlab/DeepConvLSTM
-    
+
     """
 
     def _create_model(self):
@@ -79,8 +79,8 @@ class SenselessDeepConvLSTM(RainbowModel):
 
         # Model
         i = Input(shape=(self.window_size, self.n_features))
-
-        x = lstm_layer(units=32)(i)
+        x = self._preprocessing_layer(i)
+        x = lstm_layer(units=32)(x)
 
         x = reshape_2d_add_1_dim(x)
         x = conv_layer(n_filters=64)(x)
@@ -100,7 +100,8 @@ class SenselessDeepConvLSTM(RainbowModel):
         model = Model(i, x)
         model.compile(
             optimizer="Adam",
-            loss="CategoricalCrossentropy",  # CategoricalCrossentropy (than we have to to the one hot encoding - to_categorical), before: "sparse_categorical_crossentropy"
+            # CategoricalCrossentropy (than we have to to the one hot encoding - to_categorical), before: "sparse_categorical_crossentropy"
+            loss="CategoricalCrossentropy",
             metrics=["accuracy"],
         )
 

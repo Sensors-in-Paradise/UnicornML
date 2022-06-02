@@ -1,5 +1,12 @@
 # pylint: disable=locally-disabled, multiple-statements, fixme, line-too-long, no-name-in-module, unused_import, wrong-import-order, bad-option-value
 
+from abc import ABC, abstractmethod
+from math import sqrt
+from typing import Any, Union
+from numpy.core.numeric import full
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from tensorflow.keras.utils import to_categorical  # type: ignore
 from gc import callbacks
 import os
 from abc import abstractmethod
@@ -16,14 +23,20 @@ from utils.Window import Window
 from utils.array_operations import transform_to_subarrays
 from utils.folder_operations import create_folders_in_path
 from utils.typing import assert_type
+import wandb
+from wandb.keras import WandbCallback
 
 
 class RainbowModel(tf.Module):
 
     # general
-    model_name = None
+    model_name = "model"
+    class_weight = None
+    model: Any = None
 
-    # variables that need to be implemented in the child class
+    # Input Params
+    n_features: Union[int, None] = None
+    n_outputs: Union[int, None] = None
     window_size: Union[int, None] = None
     stride_size: Union[int, None] = None
     class_weight = None
@@ -34,6 +47,11 @@ class RainbowModel(tf.Module):
     n_epochs: Union[int, None] = None
     n_features: Union[int, None] = None
     n_outputs: Union[int, None] = None
+    learning_rate: Union[float, None] = None
+
+    # Config
+    wandb_project: Union[str, None] = None
+    verbose: Union[int, None] = 1
     kwargs = None
     callbacks = []
 
@@ -56,88 +74,47 @@ class RainbowModel(tf.Module):
         self.input_distribution_mean = kwargs["input_distribution_mean"]
         self.input_distribution_variance = kwargs["input_distribution_variance"]
 
+        # input size
+        self.window_size = kwargs.get("window_size", None)
+        self.n_features = kwargs.get("n_features", None)
+
+        # output size
+        self.n_outputs = kwargs.get("n_outputs", None)
+
+        # training
+        self.batch_size = kwargs.get("batch_size", None)
+        self.n_epochs = kwargs.get("n_epochs", None)
+        self.learning_rate = kwargs.get("learning_rate", None)
+        self.validation_split = kwargs.get("validation_split", 0.2)
+        self.class_weight = kwargs.get("class_weight", None)
+
+        # others
+        self.wandb_config = kwargs.get("wandb_config", None)
+        self.verbose = kwargs.get("verbose", 1)
         self.kwargs = kwargs
+
+        # Important declarations
+        assert self.window_size is not None, "window_size is not set"
+        assert self.n_features is not None, "n_features is not set"
+        assert self.n_outputs is not None, "n_outputs is not set"
+        assert self.batch_size is not None, "batch_size is not set"
+        assert self.n_epochs is not None, "n_epochs is not set"
+        assert self.learning_rate is not None, "learning_rate is not set"
+        self.model = self._create_model()
+        self.model.summary()
+
+    def _create_model(self) -> tf.keras.Model:
+        """
+        Subclass Responsibility:
+        returns a keras model
+        """
+        raise NotImplementedError
 
     def _preprocessing_layer(self, input_layer: tf.keras.layers.Layer) -> tf.keras.layers.Layer:
         x = tf.keras.layers.Normalization(
             axis=-1, variance=self.input_distribution_variance, mean=self.input_distribution_mean)(
             input_layer)
         return x
-
-    def windowize_convert_fit(self, recordings_train: "list[Recording]") -> None:
-        """
-        For a data efficient comparison between models, the preprocessed data for
-        training and evaluation of the model only exists, while this method is running
-
-        shuffles the windows
-        """
-        assert_type([(recordings_train[0], Recording)])
-        X_train, y_train = self.windowize_convert(recordings_train)
-        self.fit(X_train, y_train)
-        return X_train, y_train
-
-    # Preprocess ----------------------------------------------------------------------
-
-    def windowize_convert(
-        self, recordings_train: "list[Recording]", should_shuffle=True
-    ) -> "tuple[np.ndarray,np.ndarray]":
-        windows_train = self.windowize(recordings_train)
-        if should_shuffle:
-            shuffle(
-                windows_train
-            )  # many running windows in a row?, one batch too homogenous?, lets shuffle
-        X_train, y_train = self.convert(windows_train)
-        return X_train, y_train
-
-    def windowize(self, recordings: "list[Recording]") -> "list[Window]":
-        """
-        based on the hyper param for window size, windowizes the recording_frames
-        convertion to numpy arrays
-        """
-        assert_type([(recordings[0], Recording)])
-
-        assert (
-            self.window_size is not None
-        ), "window_size has to be set in the constructor of your concrete model class please, you stupid ass"
-        assert (
-            self.stride_size is not None
-        ), "stride_size has to be set in the constructor of your concrete model class, please"
-
-        windows: "list[Window]" = []
-
-        for recording in recordings:
-            sensor_array = recording.sensor_frame.to_numpy()
-            sensor_subarrays = transform_to_subarrays(
-                sensor_array, self.window_size, self.stride_size
-            )
-            recording_windows = list(
-                map(
-                    lambda sensor_subarray: Window(
-                        sensor_subarray, recording.activity, recording.subject, recording.recording_index
-                    ),
-                    sensor_subarrays,
-                )
-            )
-            windows.extend(recording_windows)
-        return windows
-
-    def convert(self, windows: "list[Window]") -> "tuple[np.ndarray, np.ndarray]":
-        """
-        converts the windows to two numpy arrays as needed for the concrete model
-        sensor_array (data) and activity_array (labels)
-        """
-        assert_type([(windows[0], Window)])
-
-        sensor_arrays = list(map(lambda window: window.sensor_array, windows))
-        activities = list(map(lambda window: window.activity, windows))
-
-        # to_categorical converts the activity_array to the dimensions needed
-        activity_vectors = to_categorical(
-            np.array(activities),
-            num_classes=settings.DATA_CONFIG.n_activities(),
-        )
-
-        return np.array(sensor_arrays), np.array(activity_vectors)
 
     # The 'train' function takes an input window and a label
     @tf.function(input_signature=[
@@ -171,10 +148,35 @@ class RainbowModel(tf.Module):
         assert (
             X_train.shape[0] == y_train.shape[0]
         ), "X_train and y_train have to have the same length"
+
+        # Wandb
+        callbacks = None
+        if self.wandb_config is not None:
+            assert (
+                self.wandb_config["project"] is not None
+            ), "Wandb project name is not set"
+            assert (
+                self.wandb_config["entity"] is not None
+            ), "Wandb entity name is not set"
+            assert self.wandb_config["name"] is not None, "Wandb name is not set"
+
+            wandb.init(
+                project=str(self.wandb_config["project"]),
+                entity=self.wandb_config["entity"],
+                name=str(self.wandb_config["name"]),
+                settings=wandb.Settings(start_method='fork')
+            )
+            wandb.config = {
+                "learning_rate": self.learning_rate,
+                "epochs": self.n_epochs,
+                "batch_size": self.batch_size,
+            }
+            callbacks = [wandb.keras.WandbCallback()]
+
         history = self.model.fit(
             replaceNaN_ffill_numpy(X_train),
             y_train,
-            validation_split=0.2,
+            validation_split=self.validation_split,
             epochs=self.n_epochs,
             batch_size=self.batch_size,
             verbose=self.verbose,
@@ -192,8 +194,7 @@ class RainbowModel(tf.Module):
         logits = self.model(input_window)
         probabilities = tf.nn.softmax(logits, axis=-1)
         return {
-            "output": probabilities,
-            "logits": logits,
+            "output": probabilities
         }
 
     def predict(self, X_test: np.ndarray) -> np.ndarray:

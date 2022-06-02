@@ -1,6 +1,8 @@
 """
 File that gets executed!
 Only import from experiments and tests
+
+Execute this file from repo root dir
 """
 from utils import settings
 
@@ -19,4 +21,5 @@ from utils import settings
 
 
 if __name__ == "__main__":
+    #import experiments.sonar_template_exp
     import experiments.export_res_net_exp
