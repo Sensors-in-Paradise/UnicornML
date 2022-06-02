@@ -12,46 +12,9 @@ import utils.settings as settings
 
 
 class Windowizer:
-    def __init__(self, window_size, stride_size=None):
+    def __init__(self, window_size):
         self.window_size = window_size
-        self.stride_size = stride_size if not stride_size is None else window_size
-
-    def sonar_windowize(self, recordings: "list[Recording]") -> "list[Window]":
-        """
-        TODO: This DOES NOT work. why was it in master???
-
-        based on the hyper param for window size, windowizes the recording_frames
-        convertion to numpy arrays
-        """
-        assert_type([(recordings[0], Recording)])
-
-        assert (
-            self.window_size is not None
-        ), "window_size has to be set in the constructor of your concrete model class"
-        assert (
-            self.stride_size is not None
-        ), "stride_size has to be set in the constructor of your concrete model class"
-
-        windows: "list[Window]" = []
-        for recording in recordings:
-            sensor_array = recording.sensor_frame.to_numpy()
-            sensor_subarrays = transform_to_subarrays(
-                sensor_array, self.window_size, self.stride_size
-            )
-            recording_windows = list(
-                map(
-                    lambda index, sensor_subarray: Window(
-                        sensor_subarray,
-                        recording.activities[index],# TODO: is this the correct activity????? Ask Franz
-                        recording.subject,
-                        recording.recording_index,
-                    ),
-                    enumerate(sensor_subarrays),
-                )
-            )
-            windows.extend(recording_windows)
-        return windows
-
+    
     def jens_windowize(self, recordings: "list[Recording]") -> "list[Window]":
         """
         Jens version of windowize
