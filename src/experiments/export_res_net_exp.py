@@ -2,27 +2,18 @@
 Windowizer, Converter, new structure, working version
 """
 
-
-import os
 import random
-import numpy as np
-import pandas as pd
-from datetime import datetime
-from utils.DataConfig import OpportunityConfig, Sonar22CategoriesConfig
+
 import utils.settings as settings
-from utils.array_operations import split_list_by_percentage
-
-from utils.folder_operations import new_saved_experiment_folder
 from evaluation.conf_matrix import create_conf_matrix
+from evaluation.metrics import accuracy
 from evaluation.text_metrics import create_text_metrics
-from evaluation.metrics import accuracy, f1_score
-from utils.Windowizer import Windowizer
-from sklearn.model_selection import KFold
-from utils.Converter import Converter
-
 from models.ResNetModel import ResNetModel
-from utils.DataConfig import SonarConfig
-
+from utils.Converter import Converter
+from utils.DataConfig import Sonar22CategoriesConfig
+from utils.Windowizer import Windowizer
+from utils.array_operations import split_list_by_percentage
+from utils.folder_operations import new_saved_experiment_folder
 
 # Init
 # OpportunityConfig(dataset_path='../../data/opportunity-dataset')
@@ -32,7 +23,6 @@ settings.init(data_config)
 window_size = 30 * 3
 n_classes = len(data_config.activity_idx_to_activity_name_map)
 
-
 experiment_folder_path = new_saved_experiment_folder(
     "export_resnet_exp"
 )
@@ -41,6 +31,8 @@ experiment_folder_path = new_saved_experiment_folder(
 def leave_recording_out_split(test_percentage): return lambda recordings: split_list_by_percentage(
     list_to_split=recordings, percentage_to_split=test_percentage
 )
+
+
 # leave_recording_out_split(test_percentage=0.3)(recordings)
 
 
@@ -48,6 +40,7 @@ def leave_person_out_split_idx(recordings, test_person_idx):
     def subset_from_condition(condition, recordings): return [
         recording for recording in recordings if condition(recording)
     ]
+
     recordings_train = subset_from_condition(
         lambda recording: recording.subject != test_person_idx, recordings
     )
@@ -60,6 +53,8 @@ def leave_person_out_split_idx(recordings, test_person_idx):
 def leave_person_out_split(test_person_idx): return lambda recordings: leave_person_out_split_idx(
     recordings=recordings, test_person_idx=test_person_idx
 )
+
+
 # leave_person_out_split(test_person_idx=2)(recordings) # 1-4, TODO: could be random
 
 
@@ -110,6 +105,9 @@ model = ResNetModel(
     batch_size=32,
     input_distribution_mean=data_config.mean,
     input_distribution_variance=data_config.variance,
+    author="TobiUndFelix",
+    version="0.1",
+    description="ResNet Model for Sonar22 Dataset",
 )
 
 model.fit(X_train, y_train)
