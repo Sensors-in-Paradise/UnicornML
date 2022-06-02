@@ -64,7 +64,7 @@ def leave_person_out_split(test_person_idx): return lambda recordings: leave_per
 
 
 # Config --------------------------------------------------------------------------------------------------------------
-def windowize(recordings): return Windowizer(window_size=window_size).sonar_windowize(
+def windowize(recordings): return Windowizer(window_size=window_size).jens_windowize(
     recordings
 )
 
@@ -77,7 +77,7 @@ def flatten(tuple_list): return [
     item for sublist in tuple_list for item in sublist]
 
 
-def test_train_split(recordings): return leave_person_out_split(test_person_idx=2)(
+def test_train_split(recordings): return leave_recording_out_split(test_percentage=.2)(
     recordings
 )
 
@@ -90,7 +90,7 @@ random.shuffle(recordings)
 
 # Test Train Split
 recordings_train, recordings_test = test_train_split(recordings)
-
+print(recordings_train)
 # Windowize
 windows_train, windows_test = windowize(
     recordings_train), windowize(recordings_test)
