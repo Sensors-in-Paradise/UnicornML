@@ -18,6 +18,8 @@ class Windowizer:
 
     def sonar_windowize(self, recordings: "list[Recording]") -> "list[Window]":
         """
+        TODO: This DOES NOT work. why was it in master???
+
         based on the hyper param for window size, windowizes the recording_frames
         convertion to numpy arrays
         """
