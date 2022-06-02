@@ -26,7 +26,7 @@ class Recording:
         sensor_frame: pd.DataFrame,
         time_frame: pd.Series,
         activities: pd.Series,
-        subject: int,
+        subject: Union[str, int],
         recording_index: int,
     ) -> None:
         assert_type(
@@ -34,7 +34,6 @@ class Recording:
                 (sensor_frame, pd.DataFrame),
                 (time_frame, pd.Series),
                 (activities, pd.Series),
-                (subject, int),
                 (recording_index, int),
             ]
         )

@@ -113,11 +113,11 @@ model = LeanderDeepConvLSTM(
     n_epochs=5,
     learning_rate=0.001,
     batch_size=32,
-    # wandb_config={
-    #    "project": "all_experiments_project",
-    #    "entity": "valentindoering",
-    #    "name": experiment_name,
-    # },
+    wandb_config={
+       "project": "all_experiments_project",
+       "entity": "tfiedlerdev",
+       "name": experiment_name,
+    },
     input_distribution_mean=data_config.mean,
     input_distribution_variance=data_config.variance,
 )

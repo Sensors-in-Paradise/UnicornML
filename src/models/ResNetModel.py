@@ -30,7 +30,7 @@ class ResNetModel(RainbowModel):
         super().__init__(**kwargs)
 
         self.model_name = "resnet_model"
-
+        
         # create model
 
         # Refactoring idea:

@@ -77,6 +77,7 @@ class RainbowModel(tf.Module):
         # input size
         self.window_size = kwargs.get("window_size", None)
         self.n_features = kwargs.get("n_features", None)
+        self.stride_size = kwargs.get("stride_size", self.window_size)
 
         # output size
         self.n_outputs = kwargs.get("n_outputs", None)

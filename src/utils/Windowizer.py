@@ -1,3 +1,4 @@
+from curses import window
 from utils.typing import assert_type
 from utils.Recording import Recording
 from utils.Window import Window
@@ -11,10 +12,9 @@ import utils.settings as settings
 
 
 class Windowizer:
-    stride_size: Union[int, None] = None
-
-    def __init__(self, window_size):
+    def __init__(self, window_size, stride_size=None):
         self.window_size = window_size
+        self.stride_size = stride_size if not stride_size is None else window_size
 
     def sonar_windowize(self, recordings: "list[Recording]") -> "list[Window]":
         """
@@ -25,10 +25,10 @@ class Windowizer:
 
         assert (
             self.window_size is not None
-        ), "window_size has to be set in the constructor of your concrete model class please, you stupid ass"
+        ), "window_size has to be set in the constructor of your concrete model class"
         assert (
             self.stride_size is not None
-        ), "stride_size has to be set in the constructor of your concrete model class, please"
+        ), "stride_size has to be set in the constructor of your concrete model class"
 
         windows: "list[Window]" = []
         for recording in recordings:
@@ -38,13 +38,13 @@ class Windowizer:
             )
             recording_windows = list(
                 map(
-                    lambda sensor_subarray: Window(
+                    lambda index, sensor_subarray: Window(
                         sensor_subarray,
-                        recording.activity,
+                        recording.activities[index],# TODO: is this the correct activity????? Ask Franz
                         recording.subject,
                         recording.recording_index,
                     ),
-                    sensor_subarrays,
+                    enumerate(sensor_subarrays),
                 )
             )
             windows.extend(recording_windows)

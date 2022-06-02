@@ -2,7 +2,7 @@ import numpy as np
 from dataclasses import dataclass
 
 from utils.typing import assert_type
-
+from typing import Union
 
 @dataclass
 class Window:
@@ -15,14 +15,13 @@ class Window:
         self,
         sensor_array: np.ndarray,
         activity: int,
-        subject: str,
+        subject: Union[str, int],
         recording_index: int,
     ) -> None:
         assert_type(
             [
                 (sensor_array, (np.ndarray, np.generic)),
                 (activity, int),
-                (subject, int),
                 (recording_index, int),
             ]
         )

@@ -5,7 +5,6 @@ Windowizer, Converter, new structure, working version
 
 import os
 import random
-from cv2 import exp
 import numpy as np
 import pandas as pd
 from datetime import datetime
@@ -65,7 +64,7 @@ def leave_person_out_split(test_person_idx): return lambda recordings: leave_per
 
 
 # Config --------------------------------------------------------------------------------------------------------------
-def windowize(recordings): return Windowizer(window_size=window_size).jens_windowize(
+def windowize(recordings): return Windowizer(window_size=window_size).sonar_windowize(
     recordings
 )
 
