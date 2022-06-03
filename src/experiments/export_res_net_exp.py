@@ -1,7 +1,6 @@
 """
 Windowizer, Converter, new structure, working version
 """
-
 import random
 import utils.settings as settings
 from evaluation.conf_matrix import create_conf_matrix
@@ -66,4 +65,4 @@ create_text_metrics(
 )  # TODO: at the moment only with one function working! data gets changed (passed by reference) - refactor metric functions
 model.export(experiment_folder_path,  features=[],
     device_tags=[],
-    labels=[])
+    class_labels=[])

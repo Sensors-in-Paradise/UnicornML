@@ -5,16 +5,13 @@ from abc import abstractmethod
 from typing import Any
 from typing import Union
 import numpy as np
+# pylint: disable=g-direct-tensorflow-import
 import tensorflow as tf
 import wandb
 from tensorflow.keras.utils import to_categorical  # type: ignore
 from tensorflow.python.saved_model.utils_impl import get_saved_model_pb_path  # type: ignore
 from tflite_support import metadata as _metadata
 from models.metadata_populator import MetadataPopulatorForTimeSeriesClassifier
-
-# pylint: disable=g-direct-tensorflow-import
-
-
 from loader.preprocessing import replaceNaN_ffill_tf, replaceNaN_ffill_numpy
 from utils.folder_operations import create_folders_in_path
 from utils.typing import assert_type
@@ -109,6 +106,7 @@ class RainbowModel(tf.Module):
         assert self.batch_size is not None, "batch_size is not set"
         assert self.n_epochs is not None, "n_epochs is not set"
         assert self.learning_rate is not None, "learning_rate is not set"
+
         self.model = self._create_model()
         self.model.summary()
 
@@ -299,7 +297,7 @@ class RainbowModel(tf.Module):
         return label_file_name, features_file_name, device_tags_file_name
 
     def populate_and_export_metadata(self, export_path: str, device_tags: "list[str]", features: "list[str]", class_labels: "list[str]") -> None:
-        label_file, feature_file, device_tags_file = self._write_associated_files(export_path)
+        label_file, feature_file, device_tags_file = self._write_associated_files(export_path, device_tags, features, class_labels)
 
         export_model_path = os.path.join(export_path, f"{self.model_name}.tflite")
 
