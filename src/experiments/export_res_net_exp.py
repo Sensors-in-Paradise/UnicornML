@@ -22,7 +22,7 @@ from utils.Converter import Converter
 
 from models.ResNetModel import ResNetModel
 from utils.DataConfig import SonarConfig
-
+from utils.data_set import DataSet
 
 # Init
 # OpportunityConfig(dataset_path='../../data/opportunity-dataset')
@@ -41,34 +41,9 @@ experiment_folder_path = new_saved_experiment_folder(
 def leave_recording_out_split(test_percentage): return lambda recordings: split_list_by_percentage(
     list_to_split=recordings, percentage_to_split=test_percentage
 )
-# leave_recording_out_split(test_percentage=0.3)(recordings)
-
-
-def leave_person_out_split_idx(recordings, test_person_idx):
-    def subset_from_condition(condition, recordings): return [
-        recording for recording in recordings if condition(recording)
-    ]
-    recordings_train = subset_from_condition(
-        lambda recording: recording.subject != test_person_idx, recordings
-    )
-    recordings_test = subset_from_condition(
-        lambda recording: recording.subject == test_person_idx, recordings
-    )
-    return recordings_train, recordings_test
-
-
-def leave_person_out_split(test_person_idx): return lambda recordings: leave_person_out_split_idx(
-    recordings=recordings, test_person_idx=test_person_idx
-)
-# leave_person_out_split(test_person_idx=2)(recordings) # 1-4, TODO: could be random
 
 
 # Config --------------------------------------------------------------------------------------------------------------
-def windowize(recordings): return Windowizer(window_size=window_size).jens_windowize(
-    recordings
-)
-
-
 def convert(windows): return Converter(
     n_classes=n_classes).sonar_convert(windows)
 
@@ -77,7 +52,7 @@ def flatten(tuple_list): return [
     item for sublist in tuple_list for item in sublist]
 
 
-def test_train_split(recordings): return leave_recording_out_split(test_percentage=.2)(
+def test_train_split(recordings: DataSet) -> DataSet: return leave_recording_out_split(test_percentage=.2)(
     recordings
 )
 
@@ -92,8 +67,7 @@ random.shuffle(recordings)
 recordings_train, recordings_test = test_train_split(recordings)
 print(recordings_train)
 # Windowize
-windows_train, windows_test = windowize(
-    recordings_train), windowize(recordings_test)
+windows_train, windows_test = recordings_train.windowize(window_size), recordings_test.windowize(window_size)
 
 # Convert
 X_train, y_train, X_test, y_test = tuple(

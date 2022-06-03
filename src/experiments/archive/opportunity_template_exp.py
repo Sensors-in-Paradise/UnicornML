@@ -8,7 +8,7 @@ import random
 import numpy as np
 import pandas as pd
 from datetime import datetime
-from loader.Preprocessor import Preprocessor
+from utils.DataConfig import OpportunityConfig
 import utils.settings as settings
 from utils.array_operations import split_list_by_percentage
 
@@ -26,19 +26,19 @@ from models.BestPerformerConv import BestPerformerConv
 from models.OldLSTM import OldLSTM
 from models.SenselessDeepConvLSTM import SenselessDeepConvLSTM
 from models.LeanderDeepConvLSTM import LeanderDeepConvLSTM
-from utils.DataConfig import OpportunityConfig
+from utils.DataConfig import SonarConfig
 
 
-experiment_name = "opportunity_template_exp"
+experiment_name = "sonar_template_exp"
 currentDT = datetime.now()
 currentDT_str = currentDT.strftime("%y-%m-%d_%H-%M-%S_%f")
 experiment_name = experiment_name + "-" + currentDT_str
 
 # Init
-data_config = OpportunityConfig(dataset_path="data/opportunity-dataset")
+data_config = OpportunityConfig(dataset_path='../../data/opportunity-dataset')
 settings.init(data_config)
 window_size = 30 * 3
-n_classes = 6
+n_classes = len(data_config.activity_idx_to_activity_name_map)
 
 # Lib -----------------------------------------------------------
 
@@ -69,11 +69,6 @@ def leave_person_out_split(test_person_idx): return lambda recordings: leave_per
 
 
 # Config --------------------------------------------------------------------------------------------------------------
-def preprocess(recordings): return Preprocessor().jens_preprocess_with_normalize(
-    recordings
-)
-
-
 def windowize(recordings): return Windowizer(window_size=window_size).jens_windowize(
     recordings
 )
@@ -93,13 +88,10 @@ def test_train_split(recordings): return leave_person_out_split(test_person_idx=
 
 
 # Load data
-recordings = settings.DATA_CONFIG.load_dataset()
+recordings = data_config.load_dataset()
 
 random.seed(1678978086101)
 random.shuffle(recordings)
-
-# Preprocessing
-recordings = preprocess(recordings)
 
 # Test Train Split
 recordings_train, recordings_test = test_train_split(recordings)
@@ -122,9 +114,9 @@ model = LeanderDeepConvLSTM(
     learning_rate=0.001,
     batch_size=32,
     wandb_config={
-        "project": "all_experiments_project",
-        "entity": "valentindoering",
-        "name": experiment_name,
+       "project": "all_experiments_project",
+       "entity": "tfiedlerdev",
+       "name": experiment_name,
     },
     input_distribution_mean=data_config.mean,
     input_distribution_variance=data_config.variance,

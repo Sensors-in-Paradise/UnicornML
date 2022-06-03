@@ -3,12 +3,13 @@ import os
 
 import numpy as np
 import pandas as pd
+from utils.data_set import DataSet
 
 from utils.Recording import Recording
 import utils.settings as settings
 
 
-def load_opportunity_dataset(opportunity_dataset_path: str) -> "list[Recording]":
+def load_opportunity_dataset(opportunity_dataset_path: str) -> DataSet:
     """
     Returns a list of Recordings from the opportunity dataset
     """
@@ -81,7 +82,7 @@ def load_opportunity_dataset(opportunity_dataset_path: str) -> "list[Recording]"
         for line in lines:
             col_names.append(line)
 
-    recordings = []
+    recordings = DataSet()
     for sub, rec in itertools.product(subject_ids, recording_ids):
         file_name = f"S{sub}-ADL{rec}.dat"
         file_path = os.path.join(opportunity_dataset_path, file_name)

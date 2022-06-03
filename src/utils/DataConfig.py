@@ -1,4 +1,5 @@
 from datetime import datetime
+from utils.data_set import DataSet
 
 from utils.Recording import Recording
 from utils.cache_recordings import load_recordings
@@ -40,7 +41,7 @@ class DataConfig:
     def __init__(self, dataset_path: str):
         self.dataset_path = dataset_path
 
-    def load_dataset(self, **kwargs) -> "list[Recording]":
+    def load_dataset(self, **kwargs) -> DataSet:
         recordings = self._load_dataset(**kwargs)
         variance, mean = self._loadDataSetMeasures()
         if variance is None or mean is None:
@@ -66,7 +67,7 @@ class DataConfig:
         return recordings
 
     # interface (subclass responsibility to define) ------------------------------------------------------------
-    def _load_dataset(self) -> "list[Recording]":
+    def _load_dataset(self) -> DataSet:
         raise NotImplementedError(
             "init subclass of Config that defines the method activity_idx_to_activity_name"
         )
@@ -192,7 +193,7 @@ class OpportunityConfig(DataConfig):
             5: "sandwich time",
         }
 
-    def _load_dataset(self) -> "list[Recording]":
+    def _load_dataset(self) -> DataSet:
         return load_opportunity_dataset(self.dataset_path)
 
 
@@ -228,7 +229,7 @@ class SonarConfig(DataConfig):
         self.sensor_suffix_order = ["LF", "LW", "ST", "RW", "RF"]
         self.csv_header_size = 8
 
-    def _load_dataset(self, **args) -> "list[Recording]":
+    def _load_dataset(self, **args) -> DataSet:
         return load_sonar_dataset(self.dataset_path, **args)
 
     raw_subject_label = [
@@ -350,7 +351,7 @@ class Sonar22CategoriesConfig(DataConfig):
         self.sensor_suffix_order = ["LF", "LW", "ST", "RW", "RF"]
         self.csv_header_size = 8
 
-    def _load_dataset(self, **args) -> "list[Recording]":
+    def _load_dataset(self, **args) -> DataSet:
         return load_recordings(self.dataset_path, self.raw_label_to_activity_idx_map, **args)
 
     category_labels = {'rollstuhl transfer': 0, 'essen reichen': 1, 'umkleiden': 2, 'bad vorbereiten': 3, 'bett machen': 4, 'gesamtwaschen im bett': 5, 'aufräumen': 6, 'geschirr einsammeln': 7, 'essen austragen': 8, 'getränke ausschenken': 9, 'küchenvorbereitung': 10,
