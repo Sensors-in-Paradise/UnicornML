@@ -4,6 +4,8 @@ Windowizer, Converter, new structure, working version
 
 import random
 
+from numpy import record
+
 import utils.settings as settings
 from evaluation.conf_matrix import create_conf_matrix
 from evaluation.metrics import accuracy
@@ -29,11 +31,6 @@ experiment_folder_path = new_saved_experiment_folder(
 )
 
 
-def leave_recording_out_split(test_percentage): return lambda recordings: split_list_by_percentage(
-    list_to_split=recordings, percentage_to_split=test_percentage
-)
-
-
 # Config --------------------------------------------------------------------------------------------------------------
 def convert(windows): return Converter(
     n_classes=n_classes).sonar_convert(windows)
@@ -43,10 +40,6 @@ def flatten(tuple_list): return [
     item for sublist in tuple_list for item in sublist]
 
 
-def test_train_split(recordings: DataSet) -> DataSet: return leave_recording_out_split(test_percentage=.2)(
-    recordings
-)
-
 
 # Load data
 recordings = data_config.load_dataset(limit=10)
@@ -55,7 +48,7 @@ random.seed(1678978086101)
 random.shuffle(recordings)
 
 # Test Train Split
-recordings_train, recordings_test = test_train_split(recordings)
+recordings_train, recordings_test = recordings.split_by_percentage(test_percentage=0.2)
 print(recordings_train)
 # Windowize
 windows_train, windows_test = recordings_train.windowize(window_size), recordings_test.windowize(window_size)

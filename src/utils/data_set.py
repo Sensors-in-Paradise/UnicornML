@@ -1,4 +1,5 @@
-from apps.Tobi_UnicornML.src.utils.typing import assert_type
+from utils.array_operations import split_list_by_percentage
+from utils.typing import assert_type
 from utils.Recording import Recording
 from utils.Window import Window
 import numpy as np
@@ -83,11 +84,15 @@ class DataSet(list[Recording]):
         print(f"n_wasted_timesteps: {n_wasted_timesteps}")
     
     
-    def leave_subject_out_split(self, test_subject)-> "tuple[DataSet, DataSet]":
+    def split_leave_subject_out(self, test_subject)-> "tuple[DataSet, DataSet]":
         recordings_train = list(filter(
             lambda recording: recording.subject != test_subject, self
         ))
         recordings_test = list(filter(
             lambda recording: recording.subject == test_subject, self
         ))
+        return DataSet(recordings_train), DataSet(recordings_test)
+
+    def split_by_percentage(self, test_percentage: float) -> "tuple[DataSet, DataSet]":
+        recordings_train, recordings_test = split_list_by_percentage(list_to_split=self, percentage_to_split=test_percentage)
         return DataSet(recordings_train), DataSet(recordings_test)
