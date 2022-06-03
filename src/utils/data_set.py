@@ -84,13 +84,10 @@ class DataSet(list[Recording]):
     
     
     def leave_subject_out_split(self, test_subject)-> "tuple[DataSet, DataSet]":
-        def subset_from_condition(condition, recordings): return [
-            recording for recording in recordings if condition(recording)
-        ]
-        recordings_train = subset_from_condition(
+        recordings_train = list(filter(
             lambda recording: recording.subject != test_subject, self
-        )
-        recordings_test = subset_from_condition(
+        ))
+        recordings_test = list(filter(
             lambda recording: recording.subject == test_subject, self
-        )
-        return recordings_train, recordings_test
+        ))
+        return DataSet(recordings_train), DataSet(recordings_test)

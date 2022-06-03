@@ -27,7 +27,7 @@ from models.OldLSTM import OldLSTM
 from models.SenselessDeepConvLSTM import SenselessDeepConvLSTM
 from models.LeanderDeepConvLSTM import LeanderDeepConvLSTM
 from utils.DataConfig import SonarConfig
-
+from utils.data_set import DataSet
 
 experiment_name = "sonar_template_exp"
 currentDT = datetime.now()
@@ -62,16 +62,13 @@ def leave_person_out_split_idx(recordings, test_person_idx):
     return recordings_train, recordings_test
 
 
-def leave_person_out_split(test_person_idx): return lambda recordings: leave_person_out_split_idx(
+def leave_person_out_split(test_person_idx) -> "tuple[DataSet, DataSet]": return lambda recordings: leave_person_out_split_idx(
     recordings=recordings, test_person_idx=test_person_idx
 )
 # leave_person_out_split(test_person_idx=2)(recordings) # 1-4, TODO: could be random
 
 
 # Config --------------------------------------------------------------------------------------------------------------
-def windowize(recordings): return Windowizer(window_size=window_size).jens_windowize(
-    recordings
-)
 
 
 def convert(windows): return Converter(
@@ -82,7 +79,7 @@ def flatten(tuple_list): return [
     item for sublist in tuple_list for item in sublist]
 
 
-def test_train_split(recordings): return leave_person_out_split(test_person_idx=2)(
+def test_train_split(recordings)-> "tuple[DataSet, DataSet]": return leave_person_out_split(test_person_idx=2)(
     recordings
 )
 
@@ -97,8 +94,7 @@ random.shuffle(recordings)
 recordings_train, recordings_test = test_train_split(recordings)
 
 # Windowize
-windows_train, windows_test = windowize(
-    recordings_train), windowize(recordings_test)
+windows_train, windows_test = recordings_train.windowize(window_size),recordings_test.windowize(window_size)
 
 # Convert
 X_train, y_train, X_test, y_test = tuple(
