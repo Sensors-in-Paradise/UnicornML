@@ -303,7 +303,7 @@ class RainbowModel(tf.Module):
 
         # Generate the metadata objects and put them in the model file
         populator = MetadataPopulatorForTimeSeriesClassifier(
-            export_model_path, self._build_model_info(device_tags, features, class_labels), label_file,
+            export_model_path, self._build_model_info(device_tags, features), label_file,
             feature_file, device_tags_file)
         populator.populate()
 
