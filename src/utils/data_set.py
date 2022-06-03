@@ -3,7 +3,7 @@ from utils.typing import assert_type
 from utils.Recording import Recording
 from utils.Window import Window
 import numpy as np
-from typing import assert_type
+from utils.typing import assert_type
 import itertools
 from tensorflow.keras.utils import to_categorical
 import utils.settings as settings
@@ -22,14 +22,14 @@ class DataSet(list[Recording]):
         """
         assert_type([(self[0], Recording)])
         assert (
-            self.window_size is not None
+            window_size is not None
         ), "window_size has to be set in the constructor of your concrete model class please, you stupid ass"
-        if self.window_size > 25:
+        if window_size > 25:
             print(
                 "\n===> WARNING: the window_size is big with the used windowize algorithm (Jens) you have much data loss!!! (each activity can only be a multiple of the half the window_size, with overlapping a half of a window is cutted)\n"
             )
 
-        self._print_jens_windowize_monitoring()
+        self._print_jens_windowize_monitoring(window_size)
         # Refactoring idea (speed): Mulitprocessing https://stackoverflow.com/questions/20190668/multiprocessing-a-for-loop/20192251#20192251
         print("windowizing in progress ....")
         recording_windows = list(map(lambda recording: recording.windowize(window_size), self))
@@ -40,15 +40,15 @@ class DataSet(list[Recording]):
 
     # Helpers ---------------------------------------------------------------------------------------------------------
 
-    def _print_jens_windowize_monitoring(self):
+    def _print_jens_windowize_monitoring(self, window_size):
         def n_wasted_timesteps_jens_windowize(recording: "Recording"):
             activities = recording.activities.to_numpy()
             change_idxs = np.where(activities[:-1] != activities[1:])[0] + 1
             # (overlapping amount self.window_size // 2 from the algorithm!)
             def get_n_wasted_timesteps(label_len):
                 return (
-                    (label_len - self.window_size) % (self.window_size // 2)
-                    if label_len >= self.window_size
+                    (label_len - window_size) % (window_size // 2)
+                    if label_len >= window_size
                     else label_len
                 )
 

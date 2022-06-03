@@ -3,9 +3,6 @@ Windowizer, Converter, new structure, working version
 """
 
 import random
-
-from numpy import record
-
 import utils.settings as settings
 from evaluation.conf_matrix import create_conf_matrix
 from evaluation.metrics import accuracy
@@ -13,9 +10,7 @@ from evaluation.text_metrics import create_text_metrics
 from models.ResNetModel import ResNetModel
 from utils.DataConfig import SonarConfig,Sonar22CategoriesConfig
 from utils.data_set import DataSet
-from utils.Converter import Converter
 from utils.DataConfig import Sonar22CategoriesConfig
-from utils.array_operations import split_list_by_percentage
 from utils.folder_operations import new_saved_experiment_folder
 
 # Init
@@ -57,7 +52,7 @@ model = ResNetModel(
     input_distribution_variance=data_config.variance,
     author="TobiUndFelix",
     version="0.1",
-    description="ResNet Model for Sonar22 Dataset",
+    description="ResNet Model for Sonar22 Dataset"   
 )
 
 model.fit(X_train, y_train)
@@ -69,4 +64,6 @@ create_conf_matrix(experiment_folder_path, y_test_pred, y_test)
 create_text_metrics(
     experiment_folder_path, y_test_pred, y_test, [accuracy]
 )  # TODO: at the moment only with one function working! data gets changed (passed by reference) - refactor metric functions
-model.export(experiment_folder_path)
+model.export(experiment_folder_path,  features=[],
+    device_tags=[],
+    labels=[])

@@ -4,7 +4,7 @@ import time
 from multiprocessing import Pool
 import numpy as np
 import pandas as pd
-from apps.Tobi_UnicornML.src.utils.data_set import DataSet
+from utils.data_set import DataSet
 
 from utils.file_functions import get_subfolder_names
 from utils import settings
