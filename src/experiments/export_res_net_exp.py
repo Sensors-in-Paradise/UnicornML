@@ -24,22 +24,11 @@ data_config = Sonar22CategoriesConfig(
     dataset_path='../../data/filtered_dataset_without_null')
 settings.init(data_config)
 window_size = 30 * 3
-n_classes = len(data_config.activity_idx_to_activity_name_map)
+n_classes = data_config.n_activities()
 
 experiment_folder_path = new_saved_experiment_folder(
     "export_resnet_exp"
 )
-
-
-# Config --------------------------------------------------------------------------------------------------------------
-def convert(windows): return Converter(
-    n_classes=n_classes).sonar_convert(windows)
-
-
-def flatten(tuple_list): return [
-    item for sublist in tuple_list for item in sublist]
-
-
 
 # Load data
 recordings = data_config.load_dataset(limit=10)
@@ -49,14 +38,12 @@ random.shuffle(recordings)
 
 # Test Train Split
 recordings_train, recordings_test = recordings.split_by_percentage(test_percentage=0.2)
-print(recordings_train)
 # Windowize
 windows_train, windows_test = recordings_train.windowize(window_size), recordings_test.windowize(window_size)
 
 # Convert
-X_train, y_train, X_test, y_test = tuple(
-    flatten(map(convert, [windows_train, windows_test]))
-)
+X_train, y_train = DataSet.convert_windows_sonar(windows_train)
+X_test, y_test = DataSet.convert_windows_sonar(windows_test)
 
 # or JensModel
 model = ResNetModel(

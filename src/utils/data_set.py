@@ -5,7 +5,8 @@ from utils.Window import Window
 import numpy as np
 from typing import assert_type
 import itertools
-
+from tensorflow.keras.utils import to_categorical
+import utils.settings as settings
 
 class DataSet(list[Recording]):
     def __init__(self, data: list[Recording] = None):
@@ -96,3 +97,24 @@ class DataSet(list[Recording]):
     def split_by_percentage(self, test_percentage: float) -> "tuple[DataSet, DataSet]":
         recordings_train, recordings_test = split_list_by_percentage(list_to_split=self, percentage_to_split=test_percentage)
         return DataSet(recordings_train), DataSet(recordings_test)
+
+    def convert_windows_sonar(windows: "list[Window]") -> "tuple[np.ndarray, np.ndarray]":
+        """
+        converts the windows to two numpy arrays as needed for the concrete model
+        sensor_array (data) and activity_array (labels)
+        """
+        assert_type([(windows[0], Window)])
+
+        sensor_arrays = list(map(lambda window: window.sensor_array, windows))
+        activities = list(map(lambda window: window.activity, windows))
+
+        # to_categorical converts the activity_array to the dimensions needed
+        activity_vectors = to_categorical(
+            np.array(activities), num_classes=settings.DATA_CONFIG.n_activities(),
+        )
+
+        return np.array(sensor_arrays), np.array(activity_vectors)
+
+    def convert_windows_jens(windows: "list[Window]") -> "tuple[np.ndarray, np.ndarray]":
+        X_train, y_train = DataSet.convert_windows_sonar(windows)
+        return np.expand_dims(X_train, -1), y_train
