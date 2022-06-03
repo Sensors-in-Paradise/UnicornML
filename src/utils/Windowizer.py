@@ -1,14 +1,10 @@
-from curses import window
-from utils.typing import assert_type
+import itertools
+
+import numpy as np
+
 from utils.Recording import Recording
 from utils.Window import Window
-from utils.array_operations import transform_to_subarrays
-from typing import Union
-import itertools
-import numpy as np
-import os
-import pandas as pd
-import utils.settings as settings
+from utils.typing import assert_type
 
 
 class Windowizer:

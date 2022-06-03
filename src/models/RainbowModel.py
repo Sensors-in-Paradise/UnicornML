@@ -1,34 +1,42 @@
 # pylint: disable=locally-disabled, multiple-statements, fixme, line-too-long, no-name-in-module, unused_import, wrong-import-order, bad-option-value
 
-from abc import ABC, abstractmethod
-from math import sqrt
-from typing import Any, Union
-from numpy.core.numeric import full
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-from tensorflow.keras.utils import to_categorical  # type: ignore
-from gc import callbacks
 import os
 from abc import abstractmethod
-from random import shuffle
+from typing import Any
 from typing import Union
+
+import flatbuffers
 import numpy as np
 import tensorflow as tf
-from loader.preprocessing import replaceNaN_ffill_tf, replaceNaN_ffill_numpy
+import wandb
+from tensorflow.keras.utils import to_categorical  # type: ignore
 from tensorflow.keras.utils import to_categorical  # type: ignore
 from tensorflow.python.saved_model.utils_impl import get_saved_model_pb_path  # type: ignore
-import utils.settings as settings
-from utils.Recording import Recording
-from utils.Window import Window
-from utils.array_operations import transform_to_subarrays
+from tflite_support import metadata as _metadata
+# pylint: disable=g-direct-tensorflow-import
+from tflite_support import metadata_schema_py_generated as _metadata_fb
+
+from loader.preprocessing import replaceNaN_ffill_tf, replaceNaN_ffill_numpy
 from utils.folder_operations import create_folders_in_path
 from utils.typing import assert_type
-import wandb
-from wandb.keras import WandbCallback
+
+
+class TimeSeriesModelSpecificInfo(object):
+    """Holds information that is specifically tied to a time series classifier"""
+
+    def __init__(self, name, version, window_size, sampling_rate, features, device_tags,
+                 author, description):
+        self.name = name
+        self.version = version
+        self.window_size = window_size
+        self.sampling_rate = sampling_rate
+        self.features = features
+        self.device_tags = device_tags
+        self.author = author
+        self.description = description
 
 
 class RainbowModel(tf.Module):
-
     # general
     model_name = "model"
     class_weight = None
@@ -74,6 +82,10 @@ class RainbowModel(tf.Module):
         self.input_distribution_mean = kwargs["input_distribution_mean"]
         self.input_distribution_variance = kwargs["input_distribution_variance"]
 
+        # input params
+        self.features = kwargs.get("features", None)
+        self.device_tags = kwargs.get("device_tags", None)
+
         # input size
         self.window_size = kwargs.get("window_size", None)
         self.n_features = kwargs.get("n_features", None)
@@ -90,11 +102,17 @@ class RainbowModel(tf.Module):
         self.class_weight = kwargs.get("class_weight", None)
 
         # others
+        self.author = kwargs.get("author", None)
+        self.version = kwargs.get("version", None)
+        self.description = self._create_description()
+        self.model_info = self._build_model_info()
         self.wandb_config = kwargs.get("wandb_config", None)
         self.verbose = kwargs.get("verbose", 1)
         self.kwargs = kwargs
 
         # Important declarations
+        assert self.features is not None, "features are not set"
+        assert self.device_tags is not None, "device tags are not set"
         assert self.window_size is not None, "window_size is not set"
         assert self.n_features is not None, "n_features is not set"
         assert self.n_outputs is not None, "n_outputs is not set"
@@ -110,6 +128,13 @@ class RainbowModel(tf.Module):
         returns a keras model
         """
         raise NotImplementedError
+
+    def _create_description(self) -> Union[str, None]:
+        """
+        Subclass Responsibility:
+        returns a string describing the model
+        """
+        return None
 
     def _preprocessing_layer(self, input_layer: tf.keras.layers.Layer) -> tf.keras.layers.Layer:
         x = tf.keras.layers.Normalization(
@@ -147,17 +172,17 @@ class RainbowModel(tf.Module):
              (y_train, (np.ndarray, np.generic))]
         )
         assert (
-            X_train.shape[0] == y_train.shape[0]
+                X_train.shape[0] == y_train.shape[0]
         ), "X_train and y_train have to have the same length"
 
         # Wandb
         callbacks = None
         if self.wandb_config is not None:
             assert (
-                self.wandb_config["project"] is not None
+                    self.wandb_config["project"] is not None
             ), "Wandb project name is not set"
             assert (
-                self.wandb_config["entity"] is not None
+                    self.wandb_config["entity"] is not None
             ), "Wandb entity name is not set"
             assert self.wandb_config["name"] is not None, "Wandb name is not set"
 
@@ -215,7 +240,7 @@ class RainbowModel(tf.Module):
         create_folders_in_path(export_path_raw_model)
 
         # 1/2 Export raw model ------------------------------------------------------------
-        tf.saved_model.save(self.model, export_path_raw_model,  signatures={
+        tf.saved_model.save(self.model, export_path_raw_model, signatures={
             'train':
                 self.train.get_concrete_function(),
             'infer':
@@ -245,6 +270,71 @@ class RainbowModel(tf.Module):
 
         print("Export finished")
 
+        self.populate_and_export_metadata(export_path)
+
+    def _build_model_info(self):
+        return {self.model_name: TimeSeriesModelSpecificInfo(
+            name=self.model_name,
+            version=self.version,
+            window_size=self.window_size,
+            sampling_rate=60,  # TODO: get this from the data timestamps
+            features=self.features,
+            device_tags=self.device_tags,
+            author=self.author,
+            description=self.description,
+        )}
+
+    def _write_associated_files(self, export_path: str):
+        """
+        writes the label file, the features file and the device_tags file
+        """
+        # Write label file
+        label_file_name = "labels.txt"
+        with open(os.path.join(export_path, label_file_name), "w") as f:
+            for label in self.labels:
+                f.write(f"{label}\n")
+
+        # Write features file
+        features_file_name = "features.txt"
+        with open(os.path.join(export_path, features_file_name), "w") as f:
+            for feature in self.features:
+                f.write(f"{feature}\n")
+
+        # Write device_tags file
+        device_tags_file_name = "device_tags.txt"
+        with open(os.path.join(export_path, device_tags_file_name), "w") as f:
+            for device_tag in self.device_tags:
+                f.write(f"{device_tag}\n")
+
+        return label_file_name, features_file_name, device_tags_file_name
+
+    def populate_and_export_metadata(self, export_path: str) -> None:
+        label_file, feature_file, device_tags_file = self._write_associated_files(export_path)
+
+        export_model_path = os.path.join(export_path, f"{self.model_name}.tflite")
+
+        # Generate the metadata objects and put them in the model file
+        populator = MetadataPopulatorForTimeSeriesClassifier(
+            export_model_path, self.model_info, label_file,
+            feature_file, device_tags_file)
+        populator.populate()
+
+        # Validate the output model file by reading the metadata and produce
+        # a json file with the metadata under the export path
+        displayer = _metadata.MetadataDisplayer.with_model_file(export_model_path)
+        export_json_file = os.path.join(export_path,
+                                        self.model_name + ".json")
+        json_file = displayer.get_metadata_json()
+        with open(export_json_file, "w") as f:
+            f.write(json_file)
+
+        print("Finished populating metadata and associated file to the model:")
+        print(export_model_path)
+        print("The metadata json file has been saved to:")
+        print(export_json_file)
+        print("The associated file that has been been packed to the model is:")
+        print(displayer.get_packed_associated_file_list())
+
     @tf.function(input_signature=[tf.TensorSpec(shape=[], dtype=tf.string)])
     def restore(self, checkpoint_path):
         restored_tensors = {}
@@ -267,3 +357,107 @@ class RainbowModel(tf.Module):
         return {
             "checkpoint_path": checkpoint_path,
         }
+
+
+class MetadataPopulatorForTimeSeriesClassifier(object):
+    """Populates the metadata for a time series classifier"""
+
+    def __init__(self, model_file, model_info, label_file_path, sensor_data_file_path, sensor_file_path):
+        self.model_info = model_info
+        self.model_file = model_file
+        self.label_file_path = label_file_path
+        self.sensor_data_file_path = sensor_data_file_path
+        self.sensor_file_path = sensor_file_path
+        self.metadata_buf = None
+
+    def populate(self):
+        """Creates Metadata and the populates it for a time series classifier"""
+        self._create_metadata()
+        self._populate_metadata()
+
+    def _create_metadata(self):
+        """Creates the metadata for a time series classifier"""
+
+        # Creates model info.
+        model_meta = _metadata_fb.ModelMetadataT()
+        model_meta.name = self.model_info.name
+        model_meta.description = self.model_info.description.format(self.model_info.num_classes)
+        model_meta.author = self.model_info.author
+        model_meta.version = self.model_info.version
+        model_meta.license = "Apache License. Version 2.0 https://www.apache.org/licenses/LICENSE-2.0."
+
+        # Packs associated file for sensor data inputs.
+        label_input_file = _metadata_fb.AssociatedFileT()
+        label_input_file.name = os.path.basename(self.sensor_data_file_path)
+        label_input_file.description = "Names of sensor data inputs."
+        label_input_file.type = _metadata_fb.AssociatedFileType.DESCRIPTIONS
+
+        # Packs associated file for sensors.
+        sensor_file = _metadata_fb.AssociatedFileT()
+        sensor_file.name = os.path.basename(self.sensor_file_path)
+        sensor_file.description = "Names of sensors, that data was collected on."
+        sensor_file.type = _metadata_fb.AssociatedFileType.DESCRIPTIONS
+        model_meta.associatedFiles = [label_input_file, sensor_file]
+
+        # Creates input info.
+        input_meta = _metadata_fb.TensorMetadataT()
+        input_meta.name = "window"
+        input_meta.description = ("Input window to be classified. The expected window has a size of {0} at a sampling "
+                                  "rate of {1}. It gets data from the features: {2} and {3} IMU sensors at the "
+                                  "positions: {4}".format(self.model_info.window_size, self.model_info.sampling_rate,
+                                                          self.model_info.features, self.model_info.num_devices,
+                                                          self.model_info.device_tags))
+        input_meta.content = _metadata_fb.ContentT()
+        input_meta.content.contentProperties = _metadata_fb.FeaturePropertiesT()
+        input_meta.content.contentProperties.contentPropertiesType = (
+            _metadata_fb.ContentProperties.FeatureProperties)
+        input_meta.processUnits = []
+
+        # Creates output info.
+        output_meta = _metadata_fb.TensorMetadataT()
+        output_meta.name = "probability"
+        output_meta.description = ("Probabilities of the {0} labels respectively.".format(self.model_info.num_classes))
+        output_meta.content = _metadata_fb.ContentT()
+        output_meta.content.contentProperties = _metadata_fb.FeaturePropertiesT()
+        output_stats = _metadata_fb.StatsT()
+        output_stats.max = [1.0]
+        output_stats.min = [0.0]
+        output_meta.stats = output_stats
+
+        # Packs associated file for label outputs.
+        label_file = _metadata_fb.AssociatedFileT()
+        label_file.name = os.path.basename(self.label_file_path)
+        label_file.description = "Labels for classification output."
+        label_file.type = _metadata_fb.AssociatedFileType.TENSOR_AXIS_LABELS
+        output_meta.associatedFiles = [label_file]
+
+        # Creates subgraph info.
+        subgraph = _metadata_fb.SubGraphMetadataT()
+        subgraph.inputTensorMetadata = [input_meta]
+        subgraph.outputTensorMetadata = [output_meta]
+        model_meta.subgraphMetadata = [subgraph]
+
+        # Builds flatbuffer.
+        b = flatbuffers.Builder(0)
+        b.Finish(
+            model_meta.Pack(b),
+            _metadata.MetadataPopulator.METADATA_FILE_IDENTIFIER
+        )
+        self.metadata_buf = b.Output()
+
+    def _populate_metadata(self):
+        """Populates metadata and label file to the model file."""
+        populator = _metadata.MetadataPopulator.with_model_file(self.model_file)
+        populator.load_metadata_buffer(self.metadata_buf)
+        populator.load_associated_files([self.label_file_path, self.sensor_data_file_path, self.sensor_file_path])
+        populator.populate()
+
+    def _normalization_params(self, feature_norm):
+        """Creates normalization process unit for each input feature."""
+        input_normalization = _metadata_fb.ProcessUnitT()
+        input_normalization.optionsType = (
+            _metadata_fb.ProcessUnitOptions.NormalizationOptions)
+        input_normalization.options = _metadata_fb.NormalizationOptionsT()
+        input_normalization.options.mean = feature_norm["mean"]
+        input_normalization.options.std = feature_norm["std"]
+        return input_normalization

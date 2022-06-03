@@ -2,27 +2,19 @@
 Windowizer, Converter, new structure, working version
 """
 
-
-import os
 import random
-import numpy as np
-import pandas as pd
-from datetime import datetime
-from utils.DataConfig import OpportunityConfig, Sonar22CategoriesConfig
+
 import utils.settings as settings
-from utils.array_operations import split_list_by_percentage
-
-from utils.folder_operations import new_saved_experiment_folder
 from evaluation.conf_matrix import create_conf_matrix
+from evaluation.metrics import accuracy
 from evaluation.text_metrics import create_text_metrics
-from evaluation.metrics import accuracy, f1_score
-from utils.Windowizer import Windowizer
-from sklearn.model_selection import KFold
-from utils.Converter import Converter
-
 from models.ResNetModel import ResNetModel
-from utils.DataConfig import SonarConfig
+from utils.DataConfig import SonarConfig,Sonar22CategoriesConfig
 from utils.data_set import DataSet
+from utils.Converter import Converter
+from utils.DataConfig import Sonar22CategoriesConfig
+from utils.array_operations import split_list_by_percentage
+from utils.folder_operations import new_saved_experiment_folder
 
 # Init
 # OpportunityConfig(dataset_path='../../data/opportunity-dataset')
@@ -31,7 +23,6 @@ data_config = Sonar22CategoriesConfig(
 settings.init(data_config)
 window_size = 30 * 3
 n_classes = len(data_config.activity_idx_to_activity_name_map)
-
 
 experiment_folder_path = new_saved_experiment_folder(
     "export_resnet_exp"
@@ -84,6 +75,9 @@ model = ResNetModel(
     batch_size=32,
     input_distribution_mean=data_config.mean,
     input_distribution_variance=data_config.variance,
+    author="TobiUndFelix",
+    version="0.1",
+    description="ResNet Model for Sonar22 Dataset",
 )
 
 model.fit(X_train, y_train)
