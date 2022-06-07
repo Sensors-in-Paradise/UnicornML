@@ -5,6 +5,7 @@ from abc import abstractmethod
 from typing import Any
 from typing import Union
 import numpy as np
+
 # pylint: disable=g-direct-tensorflow-import
 import tensorflow as tf
 import wandb
@@ -20,14 +21,25 @@ from utils.typing import assert_type
 class TimeSeriesModelSpecificInfo(object):
     """Holds information that is specifically tied to a time series classifier"""
 
-    def __init__(self, name, version, window_size, sampling_rate, features, device_tags,
-                 author, description):
+    def __init__(
+        self,
+        name,
+        version,
+        window_size,
+        sampling_rate,
+        features,
+        device_tags,
+        class_labels,
+        author,
+        description,
+    ):
         self.name = name
         self.version = version
         self.window_size = window_size
         self.sampling_rate = sampling_rate
         self.features = features
         self.device_tags = device_tags
+        self.class_labels = class_labels
         self.author = author
         self.description = description
 
@@ -124,18 +136,24 @@ class RainbowModel(tf.Module):
         """
         return None
 
-    def _preprocessing_layer(self, input_layer: tf.keras.layers.Layer) -> tf.keras.layers.Layer:
+    def _preprocessing_layer(
+        self, input_layer: tf.keras.layers.Layer
+    ) -> tf.keras.layers.Layer:
         x = tf.keras.layers.Normalization(
-            axis=-1, variance=self.input_distribution_variance, mean=self.input_distribution_mean)(
-            input_layer)
+            axis=-1,
+            variance=self.input_distribution_variance,
+            mean=self.input_distribution_mean,
+        )(input_layer)
         return x
 
     # The 'train' function takes an input window and a label
-    @tf.function(input_signature=[
-        tf.TensorSpec(shape=[None, window_size, n_features], dtype=tf.float32),
-        # Binary Classification
-        tf.TensorSpec(shape=[None, n_outputs], dtype=tf.float32),
-    ])
+    @tf.function(
+        input_signature=[
+            tf.TensorSpec(shape=[None, window_size, n_features], dtype=tf.float32),
+            # Binary Classification
+            tf.TensorSpec(shape=[None, n_outputs], dtype=tf.float32),
+        ]
+    )
     def train(self, input_windows, labels):
         replaceNaN_ffill_tf(input_windows)
 
@@ -145,7 +163,8 @@ class RainbowModel(tf.Module):
             loss = self.model.loss(labels, predictions)
         gradients = tape.gradient(loss, self.model.trainable_variables)
         self.model.optimizer.apply_gradients(
-            zip(gradients, self.model.trainable_variables))
+            zip(gradients, self.model.trainable_variables)
+        )
         result = {"loss": loss}
         return result
 
@@ -156,21 +175,20 @@ class RainbowModel(tf.Module):
         Fit the self.model to the data
         """
         assert_type(
-            [(X_train, (np.ndarray, np.generic)),
-             (y_train, (np.ndarray, np.generic))]
+            [(X_train, (np.ndarray, np.generic)), (y_train, (np.ndarray, np.generic))]
         )
         assert (
-                X_train.shape[0] == y_train.shape[0]
+            X_train.shape[0] == y_train.shape[0]
         ), "X_train and y_train have to have the same length"
 
         # Wandb
         callbacks = None
         if self.wandb_config is not None:
             assert (
-                    self.wandb_config["project"] is not None
+                self.wandb_config["project"] is not None
             ), "Wandb project name is not set"
             assert (
-                    self.wandb_config["entity"] is not None
+                self.wandb_config["entity"] is not None
             ), "Wandb entity name is not set"
             assert self.wandb_config["name"] is not None, "Wandb name is not set"
 
@@ -178,7 +196,7 @@ class RainbowModel(tf.Module):
                 project=str(self.wandb_config["project"]),
                 entity=self.wandb_config["entity"],
                 name=str(self.wandb_config["name"]),
-                settings=wandb.Settings(start_method='fork')
+                settings=wandb.Settings(start_method="fork"),
             )
             wandb.config = {
                 "learning_rate": self.learning_rate,
@@ -195,20 +213,20 @@ class RainbowModel(tf.Module):
             batch_size=self.batch_size,
             verbose=self.verbose,
             class_weight=self.class_weight,
-            callbacks=callbacks
+            callbacks=callbacks,
         )
 
     # Predict ------------------------------------------------------------------------
-    @tf.function(input_signature=[
-        tf.TensorSpec(shape=[None, window_size, n_features], dtype=tf.float32),
-    ])
+    @tf.function(
+        input_signature=[
+            tf.TensorSpec(shape=[None, window_size, n_features], dtype=tf.float32),
+        ]
+    )
     def infer(self, input_window):
         replaceNaN_ffill_tf(input_window)
         logits = self.model(input_window)
         probabilities = tf.nn.softmax(logits, axis=-1)
-        return {
-            "output": probabilities
-        }
+        return {"output": probabilities}
 
     def predict(self, X_test: np.ndarray) -> np.ndarray:
         """
@@ -216,7 +234,13 @@ class RainbowModel(tf.Module):
         """
         return self.model.predict(replaceNaN_ffill_numpy(X_test))
 
-    def export(self, path: str, device_tags: "list[str]", features: "list[str]", class_labels: "list[str]") -> None:
+    def export(
+        self,
+        path: str,
+        device_tags: "list[str]",
+        features: "list[str]",
+        class_labels: "list[str]",
+    ) -> None:
         """
         will create an 'export' folder in the path, and save the model there in 3 different formats
         """
@@ -228,24 +252,21 @@ class RainbowModel(tf.Module):
         create_folders_in_path(export_path_raw_model)
 
         # 1/2 Export raw model ------------------------------------------------------------
-        tf.saved_model.save(self.model, export_path_raw_model, signatures={
-            'train':
-                self.train.get_concrete_function(),
-            'infer':
-                self.infer.get_concrete_function(),
-            'save':
-                self.save.get_concrete_function(),
-            'restore':
-                self.restore.get_concrete_function(),
-        })
+        tf.saved_model.save(
+            self.model,
+            export_path_raw_model,
+            signatures={
+                "train": self.train.get_concrete_function(),
+                "infer": self.infer.get_concrete_function(),
+                "save": self.save.get_concrete_function(),
+                "restore": self.restore.get_concrete_function(),
+            },
+        )
 
         # 2/2 Convert raw model to tflite model -------------------------------------------
-        converter = tf.lite.TFLiteConverter.from_saved_model(
-            export_path_raw_model)
+        converter = tf.lite.TFLiteConverter.from_saved_model(export_path_raw_model)
 
-        converter.optimizations = [
-            tf.lite.Optimize.DEFAULT
-        ]
+        converter.optimizations = [tf.lite.Optimize.DEFAULT]
         converter.experimental_new_converter = True
         converter.target_spec.supported_ops = [
             tf.lite.OpsSet.TFLITE_BUILTINS,
@@ -258,60 +279,114 @@ class RainbowModel(tf.Module):
 
         print("Export finished")
 
-        self.populate_and_export_metadata(export_path, device_tags, features, class_labels)
+        self.populate_and_export_metadata(
+            export_path, device_tags, features, class_labels
+        )
 
-    def _build_model_info(self, device_tags: "list[str]", features: "list[str]"):
-        return {self.model_name: TimeSeriesModelSpecificInfo(
+    @tf.function(input_signature=[tf.TensorSpec(shape=[], dtype=tf.string)])
+    def restore(self, checkpoint_path):
+        restored_tensors = {}
+        for var in self.model.weights:
+            restored = tf.raw_ops.Restore(
+                file_pattern=checkpoint_path,
+                tensor_name=var.name,
+                dt=var.dtype,
+                name="restore",
+            )
+            var.assign(restored)
+            restored_tensors[var.name] = restored
+        return restored_tensors
+
+    @tf.function(input_signature=[tf.TensorSpec(shape=[], dtype=tf.string)])
+    def save(self, checkpoint_path):
+        tensor_names = [weight.name for weight in self.model.weights]
+        tensors_to_save = [weight.read_value() for weight in self.model.weights]
+        tf.raw_ops.Save(
+            filename=checkpoint_path,
+            tensor_names=tensor_names,
+            data=tensors_to_save,
+            name="save",
+        )
+        return {
+            "checkpoint_path": checkpoint_path,
+        }
+
+    def _build_model_info(
+        self, device_tags: "list[str]", features: "list[str]", class_labels: "list[str]"
+    ):
+        return TimeSeriesModelSpecificInfo(
             name=self.model_name,
             version=self.version,
             window_size=self.window_size,
             sampling_rate=60,  # TODO: get this from the data timestamps
             features=features,
             device_tags=device_tags,
+            class_labels=class_labels,
             author=self.author,
             description=self.description,
-        )}
+        )
 
-    def _write_associated_files(self,export_path: str, device_tags: "list[str]", features: "list[str]", class_labels: "list[str]"):
+    def _write_associated_files(
+        self,
+        export_path: str,
+        device_tags: "list[str]",
+        features: "list[str]",
+        class_labels: "list[str]",
+    ):
         """
         writes the label file, the features file and the device_tags file
         """
+        print("Writing associated files ...")
         # Write label file
         label_file_name = "labels.txt"
         with open(os.path.join(export_path, label_file_name), "w") as f:
             for label in class_labels:
+                print(label, file=f)
                 f.write(f"{label}\n")
 
         # Write features file
         features_file_name = "features.txt"
         with open(os.path.join(export_path, features_file_name), "w") as f:
             for feature in features:
+                print(feature, file=f)
                 f.write(f"{feature}\n")
 
         # Write device_tags file
         device_tags_file_name = "device_tags.txt"
         with open(os.path.join(export_path, device_tags_file_name), "w") as f:
             for device_tag in device_tags:
+                print(device_tag, file=f)
                 f.write(f"{device_tag}\n")
 
         return label_file_name, features_file_name, device_tags_file_name
 
-    def populate_and_export_metadata(self, export_path: str, device_tags: "list[str]", features: "list[str]", class_labels: "list[str]") -> None:
-        label_file, feature_file, device_tags_file = self._write_associated_files(export_path, device_tags, features, class_labels)
+    def populate_and_export_metadata(
+        self,
+        export_path: str,
+        device_tags: "list[str]",
+        features: "list[str]",
+        class_labels: "list[str]",
+    ) -> None:
+        label_file, feature_file, device_tags_file = self._write_associated_files(
+            export_path, device_tags, features, class_labels
+        )
 
         export_model_path = os.path.join(export_path, f"{self.model_name}.tflite")
 
         # Generate the metadata objects and put them in the model file
         populator = MetadataPopulatorForTimeSeriesClassifier(
-            export_model_path, self._build_model_info(device_tags, features), label_file,
-            feature_file, device_tags_file)
+            export_model_path,
+            self._build_model_info(device_tags, features, class_labels),
+            os.path.join(export_path, label_file),
+            os.path.join(export_path, feature_file),
+            os.path.join(export_path, device_tags_file),
+        )
         populator.populate()
 
         # Validate the output model file by reading the metadata and produce
         # a json file with the metadata under the export path
         displayer = _metadata.MetadataDisplayer.with_model_file(export_model_path)
-        export_json_file = os.path.join(export_path,
-                                        self.model_name + ".json")
+        export_json_file = os.path.join(export_path, self.model_name + ".json")
         json_file = displayer.get_metadata_json()
         with open(export_json_file, "w") as f:
             f.write(json_file)
@@ -322,28 +397,3 @@ class RainbowModel(tf.Module):
         print(export_json_file)
         print("The associated file that has been been packed to the model is:")
         print(displayer.get_packed_associated_file_list())
-
-    @tf.function(input_signature=[tf.TensorSpec(shape=[], dtype=tf.string)])
-    def restore(self, checkpoint_path):
-        restored_tensors = {}
-        for var in self.model.weights:
-            restored = tf.raw_ops.Restore(
-                file_pattern=checkpoint_path, tensor_name=var.name, dt=var.dtype,
-                name='restore')
-            var.assign(restored)
-            restored_tensors[var.name] = restored
-        return restored_tensors
-
-    @tf.function(input_signature=[tf.TensorSpec(shape=[], dtype=tf.string)])
-    def save(self, checkpoint_path):
-        tensor_names = [weight.name for weight in self.model.weights]
-        tensors_to_save = [weight.read_value()
-                           for weight in self.model.weights]
-        tf.raw_ops.Save(
-            filename=checkpoint_path, tensor_names=tensor_names,
-            data=tensors_to_save, name='save')
-        return {
-            "checkpoint_path": checkpoint_path,
-        }
-
-
