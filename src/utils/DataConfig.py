@@ -64,10 +64,10 @@ class DataConfig:
         else:
             self.variance = variance
             self.mean = mean
-        return recordings
+        return DataSet(recordings, self)
 
     # interface (subclass responsibility to define) ------------------------------------------------------------
-    def _load_dataset(self) -> DataSet:
+    def _load_dataset(self) -> "list[Recording]":
         raise NotImplementedError(
             "init subclass of Config that defines the method activity_idx_to_activity_name"
         )
@@ -193,7 +193,7 @@ class OpportunityConfig(DataConfig):
             5: "sandwich time",
         }
 
-    def _load_dataset(self) -> DataSet:
+    def _load_dataset(self) ->  "list[Recording]":
         return load_opportunity_dataset(self.dataset_path)
 
 
@@ -229,7 +229,7 @@ class SonarConfig(DataConfig):
         self.sensor_suffix_order = ["LF", "LW", "ST", "RW", "RF"]
         self.csv_header_size = 8
 
-    def _load_dataset(self, **args) -> DataSet:
+    def _load_dataset(self, **args) -> "list[Recording]":
         return load_sonar_dataset(self.dataset_path, **args)
 
     raw_subject_label = [
@@ -351,7 +351,7 @@ class Sonar22CategoriesConfig(DataConfig):
         self.sensor_suffix_order = ["LF", "LW", "ST", "RW", "RF"]
         self.csv_header_size = 8
 
-    def _load_dataset(self, **args) -> DataSet:
+    def _load_dataset(self, **args) -> "list[Recording]":
         return load_recordings(self.dataset_path, self.raw_label_to_activity_idx_map, **args)
 
     category_labels = {'rollstuhl transfer': 0, 'essen reichen': 1, 'umkleiden': 2, 'bad vorbereiten': 3, 'bett machen': 4, 'gesamtwaschen im bett': 5, 'aufräumen': 6, 'geschirr einsammeln': 7, 'essen austragen': 8, 'getränke ausschenken': 9, 'küchenvorbereitung': 10,

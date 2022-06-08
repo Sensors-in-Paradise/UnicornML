@@ -10,12 +10,11 @@ import random
 import numpy as np
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import f1_score
+from utils.data_set import DataSet
 from models.RainbowModel import RainbowModel
-import pandas as pd
 import utils.settings as settings
 from evaluation.metrics import accuracy
 from evaluation.conf_matrix import create_conf_matrix
-from loader.Preprocessor import Preprocessor
 from models.JensModel import JensModel
 from models.RainbowModel import RainbowModel
 from models.ResNetModel import ResNetModel
@@ -23,7 +22,6 @@ from utils.filter_activities import filter_activities
 from utils.folder_operations import new_saved_experiment_folder
 from utils.DataConfig import Sonar22CategoriesConfig, OpportunityConfig
 from tensorflow.keras.layers import (Dense)
-from utils.Recording import Recording
 import matplotlib.pyplot as plt
 
 # Init
@@ -39,8 +37,6 @@ Number of recordings per person
 data_config = OpportunityConfig(
     dataset_path='../../data/opportunity-dataset')
 settings.init(data_config)
-
-
 random.seed(1678978086101)
 
 k_fold_splits = 2
@@ -48,84 +44,35 @@ numEpochsBeforeTL = 1
 numEpochsForTL = 3
 minimumRecordingsPerLeftOutPerson = 1
 # Load dataset
-recordings = settings.DATA_CONFIG.load_dataset()  # limit=75
+recordings = data_config.load_dataset()  # limit=75
 print("Variance", data_config.variance)
 print("Mean", data_config.mean)
-
-# Preprocess
-recordings = Preprocessor().our_preprocess(recordings)
-preprocess_model = ResNetModel().prepare(recordings)
-normalization_layer = preprocess_model.normalization_layer
-
-
-def split_list_by_people(recordings: "list[Recording]", peopleForListA: "list[str]") -> "tuple[np.ndarray, np.ndarray]":
-    """ Splits the recordings into a tuple of a sublist of recordings of people in peopleForListA and the recordings of other people"""
-    return np.array(list(filter(lambda recording: recording.subject in peopleForListA, recordings))), np.array(list(filter(lambda recording: recording.subject not in peopleForListA, recordings)))
-
 
 window_size = 100
 n_features = recordings[0].sensor_frame.shape[1]
 print(n_features)
-n_outputs = settings.DATA_CONFIG.n_activities()
+n_outputs = data_config.n_activities()
 
 # Create Folder, save model export and evaluations there
 experiment_folder_path = new_saved_experiment_folder(
-    "transferLearningTobi"
+    "transfer_learning_tobi"
 )
 
+def save_pie_chart_from_dict(labelsAndFrequencyDict: dict, dirName: str,fileName: str, title: str = None, subtitle: str = None) -> None:
+        plt.cla()
+        plt.clf()
+    
+        data = [labelsAndFrequencyDict[label]
+                for label in labelsAndFrequencyDict.keys()]
+        labels = [
+            f"{data_config.raw_label_to_activity_idx_map[label]} {label} {int(labelsAndFrequencyDict[label]/60)} secs" for label in labelsAndFrequencyDict.keys()]
+        plt.pie(data, labels=labels)
+        if title:
+            plt.suptitle(title, y=1.05, fontsize=18)
+        if subtitle:
+            plt.title(subtitle, fontsize=10)
 
-def count_activities_per_person(recordings: "list[Recording]"):
-    values = pd.DataFrame(
-        {recordings[0].subject: recordings[0].activities.value_counts()})
-    for rec in recordings[1:]:
-        values = values.add(pd.DataFrame(
-            {rec.subject: rec.activities.value_counts()}), fill_value=0)
-
-    return values
-
-
-def plot_activities_per_person(recordings: "list[Recording]", fileName: str, title: str = ""):
-    values = count_activities_per_person(recordings)
-
-    values.plot.bar(figsize=(22, 16))
-    plt.title(title)
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.savefig(os.path.join(experiment_folder_path, fileName))
-
-
-def save_pie_chart_from_dict(labelsAndFrequencyDict: dict, fileName: str, title: str = None, subtitle: str = None) -> None:
-    plt.cla()
-    plt.clf()
-    print(labelsAndFrequencyDict)
-    print(settings.DATA_CONFIG.raw_label_to_activity_idx_map)
-    data = [labelsAndFrequencyDict[label]
-            for label in labelsAndFrequencyDict.keys()]
-    labels = [
-        f"{settings.DATA_CONFIG.raw_label_to_activity_idx_map[label]} {label} {int(labelsAndFrequencyDict[label]/60)} secs" for label in labelsAndFrequencyDict.keys()]
-    plt.pie(data, labels=labels)
-    if title:
-        plt.suptitle(title, y=1.05, fontsize=18)
-    if subtitle:
-        plt.title(subtitle, fontsize=10)
-
-    plt.savefig(os.path.join(experiment_folder_path, fileName))
-
-
-def getActivityCountsFromRecordings(recordings: "list[Recording]") -> dict:
-    resultDict = {}
-    for recording in recordings:
-        counts = recording.activities.value_counts()
-        for activity_id, count in counts.items():
-            if activity_id in resultDict:
-                resultDict[activity_id] += count
-            else:
-                resultDict[activity_id] = count
-    for activity in settings.DATA_CONFIG.raw_label_to_activity_idx_map:
-        if not activity in resultDict:
-            resultDict[activity] = 0
-    return resultDict
-
+        plt.savefig(os.path.join(dirName, fileName))
 
 def getActivityCounts(yTrue):
     unique, counts = np.unique(np.argmax(yTrue, axis=1), return_counts=True)
@@ -143,18 +90,7 @@ def save_activity_distribution_pie_chart(yTrue, fileName: str, title: str = None
         subtitle += "\n"+subtitleSuffix
     else:
         subtitle = subtitleSuffix
-    save_pie_chart_from_dict(countsDict, fileName, title, subtitle)
-
-
-def count_recordings_of_people(recordings: "list[Recording]") -> dict:
-    peopleCount = {}
-    for recording in recordings:
-        if recording.subject in peopleCount:
-            peopleCount[recording.subject] += 1
-        else:
-            peopleCount[recording.subject] = 1
-    return peopleCount
-
+    save_pie_chart_from_dict(countsDict,experiment_folder_path, fileName, title, subtitle)
 
 def getMeanCountDifferenceFromMeanActivityCount(yTrue) -> float:
     activityCounts = getActivityCounts(yTrue)
@@ -171,11 +107,6 @@ def getMeanCountDifferenceFromMeanActivityCount(yTrue) -> float:
     return diffSum / len(activityCounts)
 
 
-def get_people_in_recordings(recordings: "list[Recording]") -> "list[str]":
-    people = set()
-    for recording in recordings:
-        people.add(recording.subject)
-    return list(people)
 
 
 def evaluate(model: "RainbowModel", X_test: np.ndarray, y_test_true: np.ndarray, confusionMatrixFileName=None, confusionMatrixTitle="") -> "tuple[float, float, float, np.ndarray]":
@@ -194,13 +125,16 @@ def evaluate(model: "RainbowModel", X_test: np.ndarray, y_test_true: np.ndarray,
 def instanciateModel():
     return ResNetModel(
         n_epochs=numEpochsBeforeTL,
+        n_features=recordings[0].sensor_frame.shape[1],
         window_size=100,
-        n_features=n_features,
         n_outputs=n_outputs,
+        learning_rate=0.001,
         batch_size=64,
-        normalization_layer=normalization_layer,
-        input_distribution_mean=data_config.input_distribution_mean,
-        input_distribution_variance=data_config.input_distribution_variance
+        input_distribution_mean=data_config.mean,
+        input_distribution_variance=data_config.variance,
+        author="Tobias Fiedler",
+        version="0.1",
+        description="ResNet Model for Sonar22 Dataset"   
     )
 
 
@@ -221,8 +155,8 @@ def getAveragesOfAttributesInDicts(dicts: "list[dict[str, float]]") -> "dict[str
     return result
 
 
-people = get_people_in_recordings(recordings)
-numRecordingsOfPeopleDict = count_recordings_of_people(recordings)
+people = recordings.get_people_in_recordings()
+numRecordingsOfPeopleDict = recordings.count_recordings_of_subjects()
 
 # ["anja.csv", "florian.csv", "oli.csv", "rauche.csv"]#, "oli.csv", "rauche.csv"
 peopleToLeaveOutPerExpirement = list(filter(
@@ -239,10 +173,10 @@ for personIndex, personToLeaveOut in enumerate(peopleToLeaveOutPerExpirement):
         f"==============================================================================\nLeaving person {personToLeaveOut} out {personIndex}/{len(peopleToLeaveOutPerExpirement)}\n==============================================================================\n")
     personId = people.index(personToLeaveOut)
     model = instanciateModel()
-    recordingsOfLeftOutPerson, recordingsTrain = split_list_by_people(recordings, [
+    recordingsOfLeftOutPerson, recordingsTrain = recordings.split_by_subjects( [
                                                                       personToLeaveOut])
     model.n_epochs = numEpochsBeforeTL
-    _, yTrainTrue = model.windowize_convert_fit(recordingsTrain)
+    _, yTrainTrue = DataSet.convert_windows_jens(recordingsTrain.windowize(window_size), data_config.n_activities())
     activityDistributionFileName = f"subject{personId}_trainActivityDistribution.png"
     save_activity_distribution_pie_chart(
         yTrainTrue,  activityDistributionFileName)
@@ -254,8 +188,7 @@ for personIndex, personToLeaveOut in enumerate(peopleToLeaveOutPerExpirement):
     model.n_epochs = numEpochsForTL
     model.model.save_weights("ckpt")
 
-    xLeftOutPerson, yLeftOutPerson = model.windowize_convert(
-        recordingsOfLeftOutPerson, should_shuffle=False)
+    xLeftOutPerson, yLeftOutPerson = DataSet.convert_windows_jens(recordingsOfLeftOutPerson.windowize(window_size), data_config.n_activities())
     # Evaluate on left out person
     k_fold = StratifiedKFold(n_splits=k_fold_splits, random_state=None)
     for (index, (train_indices, test_indices)) in enumerate(k_fold.split(np.zeros(np.shape(yLeftOutPerson)[0]), np.argmax(yLeftOutPerson, axis=1))):
@@ -267,7 +200,7 @@ for personIndex, personToLeaveOut in enumerate(peopleToLeaveOutPerExpirement):
             train_indices], yLeftOutPerson[train_indices]
         xTestLeftOutPerson, yTestLeftOutPerson = xLeftOutPerson[
             test_indices], yLeftOutPerson[test_indices]
-
+        
         # Evaluate without transfer learning
         confMatrixWithoutTLFileName = f"subject{personId}_kfold{index}_withoutTL_conf_matrix"
         accuracyWithoutTransferLearning, f1ScoreMacroWithoutTransferLearning, f1ScoreWeightedWithoutTransferLearning, yTestTrue = evaluate(
@@ -325,7 +258,7 @@ resultT = np.array(result).T
 print("resultT", resultT)
 # save a simple test report to the experiment folder
 wholeDataSetActivityDistributionFileName = "wholeDatasetActivityDistribution.png"
-_, yAll = instanciateModel().windowize_convert(recordings)
+_, yAll = DataSet.convert_windows_jens(recordings.windowize(window_size), data_config.n_activities())
 save_activity_distribution_pie_chart(
     yAll,  wholeDataSetActivityDistributionFileName)
 result_md = f"# Experiment"
@@ -346,8 +279,8 @@ result_md += f"\n## Dataset"
 result_md += f"\n### Whole dataset distribution\n![activityDistribution]({wholeDataSetActivityDistributionFileName})"
 result_md += f"\nUsing dataset `{settings.DATA_CONFIG.dataset_path}`"
 activitiesPerPersonFilename = "actvitiesPerPerson.png"
-plot_activities_per_person(
-    recordings, activitiesPerPersonFilename, "Activities per person")
+recordings.plot_activities_per_subject(
+    experiment_folder_path, activitiesPerPersonFilename, "Activities per person")
 result_md += f"\n### Activities per subject\n![activityDistribution]({activitiesPerPersonFilename})"
 result_md += f"\nLeaving people out with at least  `{minimumRecordingsPerLeftOutPerson}`"
 result_md += "\n## Experiments\n"

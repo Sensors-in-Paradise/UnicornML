@@ -25,11 +25,11 @@ def save_recordings(recordings: 'list[Recording]', path: str) -> None:
     print('Saved recordings to ' + path)
 
 
-def load_recordings(path: str, activityLabelToIndexMap: dict, limit: int = None) -> DataSet:
+def load_recordings(path: str, activityLabelToIndexMap: dict, limit: int = None) -> "list[Recording]":
     """
     Load the recordings from a folder containing csv files.
     """
-    recordings = DataSet()
+    recordings = []
 
     recording_files = os.listdir(path)
     recording_files = list(filter(lambda file: file.endswith('.csv'), recording_files))

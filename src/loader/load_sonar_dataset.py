@@ -21,7 +21,7 @@ def load_sonar_dataset(
     limit_n_recs: int = None,
     multiprocessing: bool = True,
     data_config=None,
-) -> DataSet:
+) -> "list[Recording]":
     """
     Returns a list of the raw recordings (activities, subjects included, None values) (different representaion of dataset)
     directory structure bias! not shuffled!
@@ -88,7 +88,6 @@ def load_sonar_dataset(
             for recording_folder_name in enumerated_recording_folder_names
         ]
 
-    recordings = DataSet(data = list(filter(lambda x: x is not None, recordings)))
     assert len(recordings) > 0, "load_sonar_dataset: recordings empty!"
     return recordings
 

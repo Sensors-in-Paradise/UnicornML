@@ -36,8 +36,8 @@ recordings_train, recordings_test = recordings.split_by_percentage(test_percenta
 windows_train, windows_test = recordings_train.windowize(window_size), recordings_test.windowize(window_size)
 
 # Convert
-X_train, y_train = DataSet.convert_windows_sonar(windows_train)
-X_test, y_test = DataSet.convert_windows_sonar(windows_test)
+X_train, y_train = DataSet.convert_windows_sonar(windows_train, data_config.n_activities())
+X_test, y_test = DataSet.convert_windows_sonar(windows_test, data_config.n_activities())
 
 # or JensModel
 model = ResNetModel(

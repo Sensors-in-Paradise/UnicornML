@@ -6,13 +6,23 @@ import numpy as np
 from utils.typing import assert_type
 import itertools
 from tensorflow.keras.utils import to_categorical
-import utils.settings as settings
-
+import pandas as pd
+import os
+import matplotlib.pyplot as plt
+from typing import Union
 
 class DataSet(list):
-    def __init__(self, data: "list[Recording]" = None):
+    def __init__(self, data: "Union[list[Recording], DataSet]" = None, data_config = None):
         if not data is None:
             self.extend(data)
+            if isinstance(data, DataSet):
+                self.data_config = data.data_config
+            else: 
+                assert data_config != None, "You have passed data as a list of recordings. In this case you must also pass a data_config which is not None"
+                self.data_config = data_config
+        else: 
+            assert data_config != None, "You have not passed any data to this data set. In this case you must pass a data_config which is not None"
+            self.data_config = data_config
 
     def windowize(self, window_size: int) -> "list[Window]":
         """
@@ -39,9 +49,104 @@ class DataSet(list):
         print("windowizing done")
         return list(
             itertools.chain.from_iterable(recording_windows)
-        )  # flatten (reduce dimension)
+        )  # flatten (reduce dimension)    
 
-    # Helpers ---------------------------------------------------------------------------------------------------------
+    def split_leave_subject_out(self, test_subject) -> "tuple[DataSet, DataSet]":
+        recordings_train = list(
+            filter(lambda recording: recording.subject != test_subject, self)
+        )
+        recordings_test = list(
+            filter(lambda recording: recording.subject == test_subject, self)
+        )
+        return DataSet(recordings_train, self.data_config), DataSet(recordings_test, self.data_config)
+
+    def split_by_subjects(self, subjectsForListA: "list[str]") -> "tuple[DataSet, DataSet]":
+        """ 
+        Splits the recordings into a tuple of 
+            - a sublist of recordings of subjects in subjectsForListA 
+            - the recordings of the subjects not in subjectsForListA
+        """
+        a = list(filter(lambda recording: recording.subject in subjectsForListA, self))
+        b = list(filter(lambda recording: recording.subject not in subjectsForListA, self))
+        return DataSet(a, self.data_config), DataSet(b, self.data_config)
+
+    def count_activities_per_subject(self)-> "pd.DataFrame":
+        values = pd.DataFrame(
+            {self[0].subject: self[0].activities.value_counts()})
+        for rec in self[1:]:
+            values = values.add(pd.DataFrame(
+                {rec.subject: rec.activities.value_counts()}), fill_value=0)
+        return values
+
+    def count_activities_per_subject_as_dict(self) -> "dict[str, int]":
+        resultDict = {}
+        for recording in self:
+            counts = recording.activities.value_counts()
+            for activity_id, count in counts.items():
+                if activity_id in resultDict:
+                    resultDict[activity_id] += count
+                else:
+                    resultDict[activity_id] = count
+        for activity in self.data_config.raw_label_to_activity_idx_map:
+            if not activity in resultDict:
+                resultDict[activity] = 0
+        return resultDict
+
+    def count_recordings_of_subjects(self) -> "dict[str, int]":
+        subjectCount = {}
+        for recording in self:
+            if recording.subject in subjectCount:
+                subjectCount[recording.subject] += 1
+            else:
+                subjectCount[recording.subject] = 1
+        return subjectCount
+
+    def get_people_in_recordings(self) -> "list[str]":
+        people = set()
+        for recording in self:
+            people.add(recording.subject)
+        return list(people)
+
+    def plot_activities_per_subject(self, dirPath, fileName: str, title: str = ""):
+        values = self.count_activities_per_subject()
+        values.plot.bar(figsize=(22, 16))
+        plt.title(title)
+        plt.xlabel("x")
+        plt.ylabel("y")
+        plt.savefig(os.path.join(dirPath, fileName))
+
+    def split_by_percentage(self, test_percentage: float) -> "tuple[DataSet, DataSet]":
+        recordings_train, recordings_test = split_list_by_percentage(
+            list_to_split=self, percentage_to_split=test_percentage
+        )
+        return DataSet(recordings_train, self.data_config), DataSet(recordings_test, self.data_config)
+
+    def convert_windows_sonar(
+        windows: "list[Window]", num_classes: int
+    ) -> "tuple[np.ndarray, np.ndarray]":
+        """
+        converts the windows to two numpy arrays as needed for the concrete model
+        sensor_array (data) and activity_array (labels)
+        """
+        assert_type([(windows[0], Window)])
+
+        sensor_arrays = list(map(lambda window: window.sensor_array, windows))
+        activities = list(map(lambda window: window.activity, windows))
+
+        # to_categorical converts the activity_array to the dimensions needed
+        activity_vectors = to_categorical(
+            np.array(activities),
+            num_classes=num_classes,
+        )
+
+        return np.array(sensor_arrays), np.array(activity_vectors)
+
+    def convert_windows_jens(
+        windows: "list[Window]",
+        num_classes: int
+    ) -> "tuple[np.ndarray, np.ndarray]":
+        X_train, y_train = DataSet.convert_windows_sonar(windows, num_classes)
+        return np.expand_dims(X_train, -1), y_train
 
     def _print_jens_windowize_monitoring(self, window_size):
         def n_wasted_timesteps_jens_windowize(recording: "Recording"):
@@ -84,44 +189,3 @@ class DataSet(list):
         )
         print(f"n_total_timesteps: {n_total_timesteps}")
         print(f"n_wasted_timesteps: {n_wasted_timesteps}")
-
-    def split_leave_subject_out(self, test_subject) -> "tuple[DataSet, DataSet]":
-        recordings_train = list(
-            filter(lambda recording: recording.subject != test_subject, self)
-        )
-        recordings_test = list(
-            filter(lambda recording: recording.subject == test_subject, self)
-        )
-        return DataSet(recordings_train), DataSet(recordings_test)
-
-    def split_by_percentage(self, test_percentage: float) -> "tuple[DataSet, DataSet]":
-        recordings_train, recordings_test = split_list_by_percentage(
-            list_to_split=self, percentage_to_split=test_percentage
-        )
-        return DataSet(recordings_train), DataSet(recordings_test)
-
-    def convert_windows_sonar(
-        windows: "list[Window]",
-    ) -> "tuple[np.ndarray, np.ndarray]":
-        """
-        converts the windows to two numpy arrays as needed for the concrete model
-        sensor_array (data) and activity_array (labels)
-        """
-        assert_type([(windows[0], Window)])
-
-        sensor_arrays = list(map(lambda window: window.sensor_array, windows))
-        activities = list(map(lambda window: window.activity, windows))
-
-        # to_categorical converts the activity_array to the dimensions needed
-        activity_vectors = to_categorical(
-            np.array(activities),
-            num_classes=settings.DATA_CONFIG.n_activities(),
-        )
-
-        return np.array(sensor_arrays), np.array(activity_vectors)
-
-    def convert_windows_jens(
-        windows: "list[Window]",
-    ) -> "tuple[np.ndarray, np.ndarray]":
-        X_train, y_train = DataSet.convert_windows_sonar(windows)
-        return np.expand_dims(X_train, -1), y_train

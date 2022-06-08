@@ -146,7 +146,7 @@ class RainbowModel(tf.Module):
         )(input_layer)
         return x
 
-    # The 'train' function takes an input window and a label
+    # The 'train' function takes input windows and a labels
     @tf.function(
         input_signature=[
             tf.TensorSpec(shape=[None, window_size, n_features], dtype=tf.float32),

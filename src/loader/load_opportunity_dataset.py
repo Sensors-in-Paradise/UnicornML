@@ -9,7 +9,7 @@ from utils.Recording import Recording
 import utils.settings as settings
 
 
-def load_opportunity_dataset(opportunity_dataset_path: str) -> DataSet:
+def load_opportunity_dataset(opportunity_dataset_path: str) ->  "list[Recording]":
     """
     Returns a list of Recordings from the opportunity dataset
     """
@@ -82,7 +82,7 @@ def load_opportunity_dataset(opportunity_dataset_path: str) -> DataSet:
         for line in lines:
             col_names.append(line)
 
-    recordings = DataSet()
+    recordings = []
     for sub, rec in itertools.product(subject_ids, recording_ids):
         file_name = f"S{sub}-ADL{rec}.dat"
         file_path = os.path.join(opportunity_dataset_path, file_name)
