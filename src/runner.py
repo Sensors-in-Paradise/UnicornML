@@ -22,5 +22,5 @@ from utils import settings
 
 if __name__ == "__main__":
     #import experiments.sonar_template_exp
-    import experiments.export_cnn_exp
+    import experiments.export_gait_exp
    
