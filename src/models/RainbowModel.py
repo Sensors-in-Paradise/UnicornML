@@ -341,21 +341,18 @@ class RainbowModel(tf.Module):
         label_file_name = "labels.txt"
         with open(os.path.join(export_path, label_file_name), "w") as f:
             for label in class_labels:
-                print(label, file=f)
                 f.write(f"{label}\n")
 
         # Write features file
         features_file_name = "features.txt"
         with open(os.path.join(export_path, features_file_name), "w") as f:
             for feature in features:
-                print(feature, file=f)
                 f.write(f"{feature}\n")
 
         # Write device_tags file
         device_tags_file_name = "device_tags.txt"
         with open(os.path.join(export_path, device_tags_file_name), "w") as f:
             for device_tag in device_tags:
-                print(device_tag, file=f)
                 f.write(f"{device_tag}\n")
 
         return label_file_name, features_file_name, device_tags_file_name

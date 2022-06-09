@@ -1,3 +1,4 @@
+from psutil import sensors_fans
 from utils.typing import assert_type
 
 import pandas as pd
@@ -53,10 +54,13 @@ class Recording:
         self.subject = subject
         self.recording_index = recording_index
 
-    def windowize(self, window_size: int) -> "list[Window]":
+    def windowize(self, window_size: int, features : "Union[list[str], None]" = None) -> "list[Window]":
         windows = []
+
+        sensor_frame = self.sensor_frame if features==None else self.sensor_frame[features]
+       
         recording_sensor_array = (
-            self.sensor_frame.to_numpy()
+            sensor_frame.to_numpy()
         )  # recording_sensor_array[timeaxis/row, sensoraxis/column]
         activities = self.activities.to_numpy()
 
@@ -76,6 +80,7 @@ class Recording:
                 window_sensor_array = recording_sensor_array[
                     start : (end + 1), :
                 ]  # data[timeaxis/row, featureaxis/column] data[1, 2] gives specific value, a:b gives you an interval
+
                 activity = activities[start]  # the first data point is enough
                 start += (
                     window_size // 2
