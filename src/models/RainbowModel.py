@@ -159,7 +159,6 @@ class RainbowModel(tf.Module):
 
         with tf.GradientTape() as tape:
             predictions = self.model(input_windows)
-            print(self.model)
             loss = self.model.loss(labels, predictions)
         gradients = tape.gradient(loss, self.model.trainable_variables)
         self.model.optimizer.apply_gradients(
