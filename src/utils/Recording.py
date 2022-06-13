@@ -54,11 +54,11 @@ class Recording:
         self.subject = subject
         self.recording_index = recording_index
 
-    def windowize(self, window_size: int, features : "Union[list[str], None]" = None) -> "list[Window]":
+    def windowize(self, window_size: int, features: "Union[list[str], None]" = None) -> "list[Window]":
         windows = []
 
         sensor_frame = self.sensor_frame if features==None else self.sensor_frame[features]
-       
+        
         recording_sensor_array = (
             sensor_frame.to_numpy()
         )  # recording_sensor_array[timeaxis/row, sensoraxis/column]

@@ -13,7 +13,7 @@ from tensorflow.keras.utils import to_categorical  # type: ignore
 from tensorflow.python.saved_model.utils_impl import get_saved_model_pb_path  # type: ignore
 from tflite_support import metadata as _metadata
 from models.metadata_populator import MetadataPopulatorForTimeSeriesClassifier
-from loader.preprocessing import replaceNaN_ffill_tf, replaceNaN_ffill_numpy
+from loader.preprocessing import replaceNaN_ffill_tf, replaceNaN_ffill_numpy,replaceNaN_ffill_numpy3D
 from utils.folder_operations import create_folders_in_path
 from utils.typing import assert_type
 
@@ -205,7 +205,7 @@ class RainbowModel(tf.Module):
             callbacks = [wandb.keras.WandbCallback()]
 
         self.history = self.model.fit(
-            replaceNaN_ffill_numpy(X_train),
+            replaceNaN_ffill_numpy3D(X_train),
             y_train,
             validation_split=self.validation_split,
             epochs=self.n_epochs,
@@ -231,7 +231,7 @@ class RainbowModel(tf.Module):
         """
         gets a list of windows and returns a list of prediction_vectors
         """
-        return self.model.predict(replaceNaN_ffill_numpy(X_test))
+        return self.model.predict(replaceNaN_ffill_numpy3D(X_test))
 
     def export(
         self,
