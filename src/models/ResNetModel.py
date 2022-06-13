@@ -8,7 +8,6 @@ import tensorflow.keras as keras
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
 import itertools
-from loader.preprocessing import replaceNaN_ffill
 from utils.typing import assert_type
 from utils.Window import Window
 from utils.Recording import Recording

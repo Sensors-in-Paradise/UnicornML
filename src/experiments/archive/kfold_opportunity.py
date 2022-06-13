@@ -16,11 +16,10 @@ from sklearn.model_selection import KFold
 import utils.settings as settings
 from evaluation.metrics import accuracy
 from evaluation.conf_matrix import create_conf_matrix
-from loader.Preprocessor import Preprocessor
 from models.JensModel import JensModel
 from utils.filter_activities import filter_activities
 from utils.folder_operations import new_saved_experiment_folder
-from utils.DataConfig import OpportunityConfig
+from data_configs.opportunity_config import OpportunityConfig
 from utils.save_all_recordings import save_all_recordings, load_all_recordings
 
 

@@ -24,7 +24,7 @@ class DataSet(list):
             assert data_config != None, "You have not passed any data to this data set. In this case you must pass a data_config which is not None"
             self.data_config = data_config
 
-    def windowize(self, window_size: int, features : "Union[list[str], None]" = None) -> "list[Window]":
+    def windowize(self, window_size: int) -> "list[Window]":
         """
         Jens version of windowize
         - no stride size default overlapping 50 percent
@@ -44,7 +44,7 @@ class DataSet(list):
         # Refactoring idea (speed): Mulitprocessing https://stackoverflow.com/questions/20190668/multiprocessing-a-for-loop/20192251#20192251
         print("windowizing in progress ....")
         recording_windows = list(
-            map(lambda recording: recording.windowize(window_size, features), self)
+            map(lambda recording: recording.windowize(window_size), self)
         )
         print("windowizing done")
         return list(
@@ -189,3 +189,15 @@ class DataSet(list):
         )
         print(f"n_total_timesteps: {n_total_timesteps}")
         print(f"n_wasted_timesteps: {n_wasted_timesteps}")
+
+    def replaceNaN_ffill(self):
+        """
+        the recordings have None values, this function replaces them with the last non-NaN value of the feature
+        """
+        assert_type([(self[0], Recording)])
+        fill_method = "ffill"
+        for recording in self:
+            recording.sensor_frame = recording.sensor_frame.fillna(
+                method=fill_method)
+            recording.sensor_frame = recording.sensor_frame.fillna(
+                0)

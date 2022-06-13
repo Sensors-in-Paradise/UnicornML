@@ -26,7 +26,7 @@ from models.BestPerformerConv import BestPerformerConv
 from models.OldLSTM import OldLSTM
 from models.SenselessDeepConvLSTM import SenselessDeepConvLSTM
 from models.LeanderDeepConvLSTM import LeanderDeepConvLSTM
-from utils.DataConfig import SonarConfig
+from apps.Tobi_UnicornML.data_configs.DataConfig import SonarConfig
 from loader.transition_time import transition_time_cut
 
 
