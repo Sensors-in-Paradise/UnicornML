@@ -396,3 +396,9 @@ class RainbowModel(tf.Module):
         print(export_json_file)
         print("The associated file that has been been packed to the model is:")
         print(displayer.get_packed_associated_file_list())
+
+    def save_weights(self, checkpoint_path: str):
+        self.model.save_weights(checkpoint_path)
+    
+    def load_weights(self, checkpoint_path: str):
+        self.model.load_weights(checkpoint_path)

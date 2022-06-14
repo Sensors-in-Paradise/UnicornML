@@ -116,9 +116,16 @@ class DataSet(list):
         plt.savefig(os.path.join(dirPath, fileName))
 
     def split_by_percentage(self, test_percentage: float) -> "tuple[DataSet, DataSet]":
-        recordings_train, recordings_test = split_list_by_percentage(
-            list_to_split=self, percentage_to_split=test_percentage
-        )
+        if len(self) == 2: #TODO: check for the number of classes and split for each of the class recordings individually
+            recordings_train0, recordings_test0 = self[0].split_by_percentage(test_percentage)
+            recordings_train1, recordings_test1 = self[1].split_by_percentage(test_percentage)
+            recordings_train = [recordings_train0, recordings_train1]
+            recordings_test = [recordings_test0, recordings_test1]
+        else:  
+            recordings_train, recordings_test = split_list_by_percentage(
+                list_to_split=self, percentage_to_split=test_percentage
+            )
+        print(f"amount of recordings_train: {len(recordings_train)}\n amount of recordings_test: {len(recordings_test)}")
         return DataSet(recordings_train, self.data_config), DataSet(recordings_test, self.data_config)
 
     def convert_windows_sonar(
