@@ -10,7 +10,6 @@ from evaluation.conf_matrix import create_conf_matrix
 from evaluation.metrics import accuracy
 from evaluation.text_metrics import create_text_metrics
 from models.ResNetModel import ResNetModel
-from data_configs.data_config import DataConfig
 from data_configs.sonar_lab_config import SonarLabConfig
 from utils.data_set import DataSet
 from utils.folder_operations import new_saved_experiment_folder
