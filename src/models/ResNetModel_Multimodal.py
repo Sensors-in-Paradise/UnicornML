@@ -234,11 +234,12 @@ class ResNetModelMultimodal(RainbowModel):
             map(lambda recording: len(recording.activities), recordings)
         )
         n_wasted_timesteps = sum(map(n_wasted_timesteps_jens_windowize, recordings))
-        print(
-            f"=> jens_windowize_monitoring (total recording time)\n\tbefore: {to_hours_str(n_total_timesteps)}\n\tafter: {to_hours_str(n_total_timesteps - n_wasted_timesteps)}"
-        )
-        print(f"n_total_timesteps: {n_total_timesteps}")
-        print(f"n_wasted_timesteps: {n_wasted_timesteps}")
+        # print(
+        #     f"=> jens_windowize_monitoring (total recording time)\n\tbefore: {to_hours_str(n_total_timesteps)}\n\tafter: {to_hours_str(n_total_timesteps - n_wasted_timesteps)}"
+        # )
+        # print(f"n_total_timesteps: {n_total_timesteps}")
+        # print(f"n_wasted_timesteps: {n_wasted_timesteps}")
+        print(f"\nWindowizing: {n_total_timesteps} Timesteps  -  {to_hours_str(n_total_timesteps - n_wasted_timesteps)} ")
 
     def windowize(self, recordings: "list[Recording]") -> "list[Window]":
         """
@@ -258,12 +259,12 @@ class ResNetModelMultimodal(RainbowModel):
 
         self._print_jens_windowize_monitoring(recordings)
         # Refactoring idea (speed): Mulitprocessing https://stackoverflow.com/questions/20190668/multiprocessing-a-for-loop/20192251#20192251
-        print("windowizing in progress ....")
+        # print("windowizing in progress ....")
         recording_windows = list(map(self._windowize_recording, recordings))
         recording_windows = list(
             itertools.chain.from_iterable(recording_windows)
         )  # flatten (reduce dimension)
-        print(f"windowizing done: {len(recording_windows)} windows")
+        print(f"Windowizing done: {len(recording_windows)} Windows")
         return recording_windows
 
     def convert(self, windows: "list[Window]") -> "tuple[np.ndarray, np.ndarray]":

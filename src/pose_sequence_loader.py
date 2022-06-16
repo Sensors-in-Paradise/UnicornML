@@ -24,6 +24,10 @@ def get_poseframe(recording: Recording, recordings_root: str):
                 pose_frame
     )
 
+    pose_frame = _post_process_pose(
+        pose_frame
+    )
+
     try:
         # TODO maybe use starttimestamp instead of second activity time and ignore potential shift. 
         absolute_frame_start_time = _get_absolute_start_time(recording, pose_startTime, pose_time_second_activity) 
@@ -113,8 +117,7 @@ def _get_absolute_frame_time(relative_time, relative_start_time, absolute_start_
 
 def _sampleUp_poseframe(pose_frame, time_frame, absolute_frame_start_time):
     new_pose_frame = []
-    feature_columns = list(pose_frame.columns)
-    feature_columns.remove("TimeStamp")
+    feature_columns = _feature_columns(pose_frame)
     #new_pose_frame[columns] = time_frame.apply(lambda timeRow: _get_interpolated_pose_row(timeRow, pose_frame))
 
     CRITICAL_TIME_MARGIN = 1000
@@ -164,11 +167,31 @@ def _sampleUp_poseframe(pose_frame, time_frame, absolute_frame_start_time):
                 
     return pd.DataFrame.from_dict(new_pose_frame)
 
+def _post_process_pose(frame):
+    # Centralize Stickman
+    frame = frame.apply(lambda row: _centralize_row(row, _feature_columns(frame)), axis=1)
+
+    return frame
+    
+def _centralize_row(row_series, feature_columns):   
+    feature_columns = list(set([feature[:-2] for feature in feature_columns]))
+    feature_columns_x = [f'{feature}_X' for feature in feature_columns]
+    feature_columns_y = [f'{feature}_Y' for feature in feature_columns]
+
+    mass_point_x = row_series[feature_columns_x].mean(axis=0)
+    translation_x = mass_point_x - 0.5
+    row_series[feature_columns_x] = row_series.apply(lambda feature: feature - translation_x)
+
+    mass_point_y = row_series[feature_columns_y].mean(axis=0)
+    translation_y = mass_point_y - 0.5
+    row_series[feature_columns_y] = row_series.apply(lambda feature: feature - translation_y)
+
+    return row_series
+    
+
 def _adjust_columns_poseframe(frame):
     if "Confidence" in frame.columns:
         del frame["Confidence"]
-
-    # TODO kick out low confidences 
 
     frame = _map_head_points(frame)
 
@@ -208,3 +231,11 @@ def _map_hip_points(frame):
             del frame[column]
     
     return frame
+
+def _feature_columns(frame) -> list:
+    feature_columns = list(frame.columns)
+    if "TimeStamp" in feature_columns:
+        feature_columns.remove("TimeStamp")
+    if "Confidence" in feature_columns:
+        feature_columns.remove("Confidence")
+    return feature_columns

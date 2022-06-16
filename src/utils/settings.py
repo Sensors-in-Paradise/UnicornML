@@ -25,7 +25,7 @@ def init(data_config=None):
     # Paths -----------------------------------------------
 
     global SAVED_EXPERIMENTS_PATH
-    SAVED_EXPERIMENTS_PATH = "src/saved_experiments"
+    SAVED_EXPERIMENTS_PATH = "saved_experiments"
 
     global BP_PATH
     BP_PATH = "/dhc/groups/bp2021ba1"

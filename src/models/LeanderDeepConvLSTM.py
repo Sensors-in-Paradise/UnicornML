@@ -30,7 +30,7 @@ class LeanderDeepConvLSTM(ResNetModelMultimodal):
 
     """
 
-    def _create_model(self):
+    def _create_model(self, n_features, n_outputs):
 
         initializer = Orthogonal()
         conv_layer = lambda n_filters: lambda the_input: Conv2D(
@@ -44,10 +44,10 @@ class LeanderDeepConvLSTM(ResNetModelMultimodal):
             units=32, dropout=0.1, return_sequences=True, kernel_initializer=initializer
         )(the_input)
 
-        i = Input(shape=(self.window_size, self.n_features))
+        i = Input(shape=(self.window_size, n_features))
 
         # Adding 4 CNN layers.
-        x = Reshape(target_shape=(self.window_size, self.n_features, 1))(i)
+        x = Reshape(target_shape=(self.window_size, n_features, 1))(i)
         conv_n_filters = [32, 64]
         for n_filters in conv_n_filters:
             x = conv_layer(n_filters=n_filters)(x)
@@ -63,7 +63,7 @@ class LeanderDeepConvLSTM(ResNetModelMultimodal):
             x = lstm_layer(x)
 
         x = Flatten()(x)
-        x = Dense(units=self.n_outputs, activation="softmax")(x)
+        x = Dense(units=n_outputs, activation="softmax")(x)
 
         model = Model(i, x)
         model.compile(
