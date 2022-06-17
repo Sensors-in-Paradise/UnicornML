@@ -6,7 +6,6 @@ import numpy as np
 from typing import Union
 
 
-
 @dataclass
 class Recording:
     """

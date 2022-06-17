@@ -22,8 +22,12 @@ class DataConfig:
     # Dataset Config (subclass responsibility) -----------
 
     raw_label_to_activity_idx_map = None
-    activity_idx_to_activity_name_map = None
+    raw_subject_to_subject_idx_map = None
 
+    activity_idx_to_activity_name_map = None
+    subject_idx_to_subject_name_map = None
+
+    timestep_frequency = None # Hz
 
     timestep_frequency = None # Hz
 
@@ -44,6 +48,19 @@ class DataConfig:
             self.raw_label_to_activity_idx_map is not None
         ), "A subclass of Config which initializes the var raw_label_to_activity_idx_map should be used to access activity mapping."
         return self.raw_label_to_activity_idx_map[label]
+
+    def raw_subject_to_subject_idx(self, subject: str) -> int:
+        assert (
+            self.raw_subject_to_subject_idx_map is not None
+        ), "A subclass of Config which initializes the var raw_subject_to_subject_idx_map should be used to access subject mapping."
+        return self.raw_subject_to_subject_idx_map[subject]
+
+    def subject_idx_to_subject_name(self, subject_idx: int) -> str:
+        assert (
+            self.subject_idx_to_subject_name_map is not None
+        ), "A subclass of Config which initializes the var subject_idx_to_subject_name_map should be used to access subject mapping."
+        assert_type((subject_idx, int))
+        return self.subject_idx_to_subject_name_map[subject_idx]
 
     def activity_idx_to_activity_name(self, activity_idx: int) -> str:
         assert (
@@ -109,9 +126,18 @@ class SonarConfig(DataConfig):
                 category["entries"] for category in self.category_labels
             )
         )
-        self.raw_label_to_activity_idx_map = {label: i for i, label in enumerate(labels)} # no relabeling applied
+        self.raw_label_to_activity_idx_map = {
+            label: i for i, label in enumerate(labels)
+        }  # no relabeling applied
         activities = {k: v for v, k in enumerate(labels)}
         self.activity_idx_to_activity_name_map = {v: k for k, v in activities.items()}
+
+        self.raw_subject_to_subject_idx_map = {
+            key: value for value, key in enumerate(self.raw_subject_label)
+        }
+        self.subject_idx_to_subject_name_map = {
+            v: k for k, v in self.raw_subject_to_subject_idx_map.items()
+        }  # just the inverse, do relabeling here, if needed
 
         # SONAR SPECIFIC VARS --------------------------------------------------
 
@@ -121,7 +147,7 @@ class SonarConfig(DataConfig):
     def load_dataset(self, **args) -> "list[Recording]":
         return load_sonar_dataset(self.dataset_path, **args)
 
-    people = [
+    raw_subject_label = [
         "unknown",
         "christine",
         "aileen",
@@ -240,18 +266,6 @@ class Sonar22CategoriesConfig(DataConfig):
     def load_dataset(self, **args) -> "list[Recording]":
         return load_recordings(self.dataset_path,self.raw_label_to_activity_idx_map, **args)
 
-    people = [
-        "unknown",
-        "christine",
-        "aileen",
-        "connie",
-        "yvan",
-        "brueggemann",
-        "jenny",
-        "mathias",
-        "kathi",
-        "anja",
-    ]
     category_labels = {'rollstuhl transfer': 0, 'essen reichen': 1, 'umkleiden': 2, 'bad vorbereiten': 3, 'bett machen': 4, 'gesamtwaschen im bett': 5, 'aufräumen': 6, 'geschirr einsammeln': 7, 'essen austragen': 8, 'getränke ausschenken': 9, 'küchenvorbereitung': 10, 'waschen am waschbecken': 11, 'rollstuhl schieben': 12, 'mundpflege': 13, 'haare kämmen': 14, 'essen auf teller geben': 15, 'dokumentation': 16, 'aufwischen (staub)': 17, 'haare waschen': 18, 'medikamente stellen': 19, 'accessoires anlegen': 20, 'föhnen': 21}
 
 class LabPoseConfig(DataConfig):

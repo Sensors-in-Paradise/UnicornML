@@ -2,7 +2,6 @@ import numpy as np
 from tensorflow import keras
 from tensorflow.keras import layers
 from models.RainbowModel import RainbowModel
-from models.ResNetModel_Multimodal import ResNetModelMultimodal
 from models.JensModel import JensModel
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
@@ -10,6 +9,7 @@ from tensorflow.keras.initializers import Orthogonal
 from tensorflow.keras.layers import (
     Input,
     Conv2D,
+    Conv1D,
     Dense,
     Flatten,
     Dropout,
@@ -24,13 +24,13 @@ from tensorflow.keras.layers import (
 )
 
 
-class LeanderDeepConvLSTM(ResNetModelMultimodal):
+class AlternativeDeepConvLSTM(RainbowModel):
     """
     https://github.com/STRCWearlab/DeepConvLSTM
-
+    
     """
 
-    def _create_model(self, n_features, n_outputs):
+    def _create_model(self):
 
         initializer = Orthogonal()
         conv_layer = lambda n_filters: lambda the_input: Conv2D(
@@ -40,9 +40,7 @@ class LeanderDeepConvLSTM(ResNetModelMultimodal):
             activation="relu",
             kernel_initializer=initializer,
         )(the_input)
-        lstm_layer = lambda the_input: LSTM(
-            units=32, dropout=0.1, return_sequences=True, kernel_initializer=initializer
-        )(the_input)
+        lstm_layer = lambda the_input: LSTM(units=32, dropout=0.0)(the_input)
 
         i = Input(shape=(self.window_size, self.n_features))
 
@@ -58,11 +56,11 @@ class LeanderDeepConvLSTM(ResNetModelMultimodal):
             x = lstm_layer(x)
 
         x = Flatten()(x)
-        x = Dense(units=n_outputs, activation="softmax")(x)
+        x = Dense(units=self.n_outputs, activation="softmax")(x)
 
         model = Model(i, x)
         model.compile(
-            optimizer="RMSprop",
+            optimizer="Adam",
             loss="CategoricalCrossentropy",  # CategoricalCrossentropy (than we have to to the one hot encoding - to_categorical), before: "sparse_categorical_crossentropy"
             metrics=["accuracy"],
         )
