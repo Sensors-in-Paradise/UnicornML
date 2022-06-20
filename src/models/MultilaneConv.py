@@ -29,7 +29,8 @@ class MultilaneConv(JensModel):
     def _create_model(self):
         def conv_pooling_dropout(n_filters, kernel_size=(3, 3)):
             def layer_block(x):
-                x = Conv2D(filters=n_filters, kernel_size=(3, 3), activation="relu")(x)
+                x = Conv2D(filters=n_filters, kernel_size=(
+                    3, 3), activation="relu")(x)
                 x = MaxPooling2D(pool_size=(2, 2))(x)
                 x = Dropout(0.3)(x)
                 return x
@@ -37,11 +38,11 @@ class MultilaneConv(JensModel):
             return layer_block
 
         i = Input(shape=(self.window_size, self.n_features, 1))
-
+        x = self._preprocessing_layer(i)
         outputs = []
         n_parallel_lines = 1
         for _ in range(n_parallel_lines):
-            x = conv_pooling_dropout(32)(i)
+            x = conv_pooling_dropout(32)(x)
             x = conv_pooling_dropout(64)(x)
             x = Flatten()(x)
             x = Dropout(0.2)(x)

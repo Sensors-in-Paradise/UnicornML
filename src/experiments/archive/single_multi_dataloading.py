@@ -16,7 +16,7 @@ from loader.Preprocessor import Preprocessor
 from models.JensModel import JensModel
 from utils.filter_activities import filter_activities
 from utils.folder_operations import new_saved_experiment_folder
-from utils.DataConfig import SonarConfig
+from apps.Tobi_UnicornML.data_configs.DataConfig import SonarConfig
 from utils.save_all_recordings import save_all_recordings, load_all_recordings
 from utils.array_operations import split_list_by_percentage
 

@@ -65,6 +65,7 @@ class JensModel(RainbowModel):
         i = Input(
             shape=(self.window_size, self.n_features, 1)
         )  # before: self.x_train[0].shape - (25, 51, 1)... before self_x_train = np.expand_dims(self.x_train[0], -1) - around the value another []
+        x = self._preprocessing_layer(i)
         x = Conv2D(
             32,
             (3, 3),
@@ -72,7 +73,7 @@ class JensModel(RainbowModel):
             activation="relu",
             padding="same",
             kernel_regularizer=regularizers.l2(0.0005),
-        )(i)
+        )(x)
         x = BatchNormalization()(x)
         x = MaxPooling2D((2, 2))(x)
         x = Dropout(0.2)(x)
@@ -105,7 +106,8 @@ class JensModel(RainbowModel):
         model = Model(i, x)
         model.compile(
             optimizer=Adam(learning_rate=self.learning_rate),
-            loss="categorical_crossentropy",  # CategoricalCrossentropy (than we have to to the one hot encoding - to_categorical), before: "sparse_categorical_crossentropy"
+            # CategoricalCrossentropy (than we have to to the one hot encoding - to_categorical), before: "sparse_categorical_crossentropy"
+            loss="categorical_crossentropy",
             metrics=["accuracy"],
         )
 

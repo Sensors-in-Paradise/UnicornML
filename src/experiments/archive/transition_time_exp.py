@@ -26,7 +26,8 @@ from models.BestPerformerConv import BestPerformerConv
 from models.OldLSTM import OldLSTM
 from models.SenselessDeepConvLSTM import SenselessDeepConvLSTM
 from models.LeanderDeepConvLSTM import LeanderDeepConvLSTM
-from utils.DataConfig import SonarConfig
+from apps.Tobi_UnicornML.data_configs.DataConfig import SonarConfig
+from loader.transition_time import transition_time_cut
 
 
 experiment_name = "sonar_template_exp"
@@ -68,15 +69,12 @@ leave_person_out_split = lambda test_person_idx: lambda recordings: leave_person
 preprocess = lambda recordings: Preprocessor().jens_preprocess_with_normalize(
     recordings
 )
-windowize = lambda recordings: Windowizer(window_size=window_size).jens_windowize(
-    recordings
-)
+windowize = lambda recordings: recordings.windowize(window_size)
 convert = lambda windows: Converter(n_classes=n_classes).sonar_convert(windows)
 flatten = lambda tuple_list: [item for sublist in tuple_list for item in sublist]
 test_train_split = lambda recordings: leave_person_out_split(test_person_idx=2)(
     recordings
 )
-
 
 # Load data
 recordings = settings.DATA_CONFIG.load_dataset(multiprocessing=False, limit_n_recs=10)
@@ -86,6 +84,7 @@ random.shuffle(recordings)
 
 # Preprocessing
 recordings = preprocess(recordings)
+recordings = transition_time_cut(recordings)
 
 # Test Train Split
 recordings_train, recordings_test = test_train_split(recordings)

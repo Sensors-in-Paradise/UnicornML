@@ -1,6 +1,8 @@
 """
 File that gets executed!
 Only import from experiments and tests
+
+Execute this file from repo root dir
 """
 from utils import settings
 
@@ -16,9 +18,10 @@ from utils import settings
 
 # settings.init("sonar")
 # import experiments.sonar_cnn
-    
 
 
 if __name__ == "__main__":
-    import experiments.transition_time_exp
-
+    #import experiments.sonar_template_exp
+    import experiments.transfer_learning_felix
+    #import experiments.export_res_net_exp
+   

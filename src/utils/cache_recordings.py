@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+from utils.data_set import DataSet
 from utils.Recording import Recording
 
 def save_recordings(recordings: 'list[Recording]', path: str) -> None:
@@ -24,7 +25,7 @@ def save_recordings(recordings: 'list[Recording]', path: str) -> None:
     print('Saved recordings to ' + path)
 
 
-def load_recordings(path: str, activityLabelToIndexMap: dict, limit: int = None) -> 'list[Recording]':
+def load_recordings(path: str, activityLabelToIndexMap: dict, limit: int = None) -> "list[Recording]":
     """
     Load the recordings from a folder containing csv files.
     """
