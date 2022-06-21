@@ -27,25 +27,28 @@ from tensorflow.keras.layers import (
 class AlternativeDeepConvLSTM(RainbowModel):
     """
     https://github.com/STRCWearlab/DeepConvLSTM
-    
+
     """
 
     def _create_model(self):
 
         initializer = Orthogonal()
-        conv_layer = lambda n_filters: lambda the_input: Conv2D(
+
+        def conv_layer(n_filters): return lambda the_input: Conv2D(
             filters=n_filters,
             strides=(5, 1),
             kernel_size=(5, 1),
             activation="relu",
             kernel_initializer=initializer,
         )(the_input)
-        lstm_layer = lambda the_input: LSTM(units=32, dropout=0.0)(the_input)
+
+        def lstm_layer(the_input): return LSTM(
+            units=32, dropout=0.0)(the_input)
 
         i = Input(shape=(self.window_size, self.n_features))
-
+        x = self._preprocessing_layer(i)
         # Adding 4 CNN layers.
-        x = Reshape(target_shape=(self.window_size, self.n_features, 1))(i)
+        x = Reshape(target_shape=(self.window_size, self.n_features, 1))(x)
         conv_n_filters = [32, 64]
         for n_filters in conv_n_filters:
             x = conv_layer(n_filters=n_filters)(x)
@@ -61,7 +64,8 @@ class AlternativeDeepConvLSTM(RainbowModel):
         model = Model(i, x)
         model.compile(
             optimizer="Adam",
-            loss="CategoricalCrossentropy",  # CategoricalCrossentropy (than we have to to the one hot encoding - to_categorical), before: "sparse_categorical_crossentropy"
+            # CategoricalCrossentropy (than we have to to the one hot encoding - to_categorical), before: "sparse_categorical_crossentropy"
+            loss="CategoricalCrossentropy",
             metrics=["accuracy"],
         )
 

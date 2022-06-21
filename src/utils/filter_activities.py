@@ -23,7 +23,7 @@ def filter_activities_negative(
 
 
 def filter_activities_custom(
-    recordings: "list[Recording]", filter_fn: Callable[[pd.Series], list[bool]]
+    recordings: "list[Recording]", filter_fn: "Callable[[pd.Series], list[bool]]"
 ) -> "list[Recording]":
     """
     Removes all activities where filter_fn is false
@@ -34,7 +34,8 @@ def filter_activities_custom(
         recording.sensor_frame.reset_index(drop=True, inplace=True)
         recording.time_frame.reset_index(drop=True, inplace=True)
 
-        recording.activities = recording.activities[filter_fn(recording.activities)]
+        recording.activities = recording.activities[filter_fn(
+            recording.activities)]
         recording.sensor_frame = recording.sensor_frame.loc[recording.activities.index]
         recording.time_frame = recording.time_frame.loc[recording.activities.index]
 
@@ -65,11 +66,11 @@ def filter_short_activities(
             ] < (threshhold * 1000000):
                 if strategy == 0:
                     recording.activities.iloc[
-                        indices[i] : indices[i + 1]
+                        indices[i]: indices[i + 1]
                     ] = recording.activities.iloc[indices[i - 1]]
                 elif strategy == 1:
                     recording.activities.iloc[
-                        indices[i] : indices[i + 1]
+                        indices[i]: indices[i + 1]
                     ] = "null-activity"
 
     return recordings
@@ -88,6 +89,7 @@ def rename_activities(
 
     for recording in recordings:
         for old_activity, new_activity in rules.items():
-            recording.activities[recording.activities == old_activity] = new_activity
+            recording.activities[recording.activities ==
+                                 old_activity] = new_activity
 
     return recordings

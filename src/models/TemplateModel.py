@@ -32,8 +32,8 @@ class TemplateModel(RainbowModel):
     def _create_model(self):
 
         i = Input(shape=(self.window_size, self.n_features))
-
-        x = Reshape(target_shape=(self.window_size, self.n_features, 1))(i)
+        x = self._preprocessing_layer(i)
+        x = Reshape(target_shape=(self.window_size, self.n_features, 1))(x)
         x = Conv2D(filters=32, kernel_size=(3, 3), activation="relu")(x)
         x = MaxPooling2D(pool_size=(2, 2))(x)
         x = Conv2D(filters=64, kernel_size=(3, 3), activation="relu")(x)

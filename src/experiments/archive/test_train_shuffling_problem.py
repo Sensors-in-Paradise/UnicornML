@@ -8,7 +8,6 @@ This experiment has an accuracy of 82 percent
 import os
 import random
 from loader.load_opportunity_dataset import load_opportunity_dataset
-from loader.Preprocessor import Preprocessor
 import utils.settings as settings
 from utils.array_operations import split_list_by_percentage
 from models.JensModel import JensModel

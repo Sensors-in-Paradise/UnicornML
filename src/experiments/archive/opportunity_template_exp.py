@@ -8,7 +8,7 @@ import random
 import numpy as np
 import pandas as pd
 from datetime import datetime
-from loader.Preprocessor import Preprocessor
+from utils.DataConfig import OpportunityConfig
 import utils.settings as settings
 from utils.array_operations import split_list_by_percentage
 
@@ -27,8 +27,7 @@ from models.OldLSTM import OldLSTM
 from models.SenselessDeepConvLSTM import SenselessDeepConvLSTM
 from models.LeanderDeepConvLSTM import LeanderDeepConvLSTM
 from utils.DataConfig import SonarConfig
-from loader.transition_time import transition_time_cut
-
+from utils.data_set import DataSet
 
 experiment_name = "sonar_template_exp"
 currentDT = datetime.now()
@@ -36,18 +35,22 @@ currentDT_str = currentDT.strftime("%y-%m-%d_%H-%M-%S_%f")
 experiment_name = experiment_name + "-" + currentDT_str
 
 # Init
-data_config = SonarConfig(dataset_path='data/sonar-dataset')
+data_config = OpportunityConfig(dataset_path='../../data/opportunity-dataset')
 settings.init(data_config)
 window_size = 30 * 3
-n_classes = 59
+n_classes = len(data_config.activity_idx_to_activity_name_map)
 
 # Lib -----------------------------------------------------------
-leave_recording_out_split = lambda test_percentage: lambda recordings: split_list_by_percentage(
+
+
+def leave_recording_out_split(test_percentage): return lambda recordings: split_list_by_percentage(
     list_to_split=recordings, percentage_to_split=test_percentage
 )
 # leave_recording_out_split(test_percentage=0.3)(recordings)
+
+
 def leave_person_out_split_idx(recordings, test_person_idx):
-    subset_from_condition = lambda condition, recordings: [
+    def subset_from_condition(condition, recordings): return [
         recording for recording in recordings if condition(recording)
     ]
     recordings_train = subset_from_condition(
@@ -59,40 +62,39 @@ def leave_person_out_split_idx(recordings, test_person_idx):
     return recordings_train, recordings_test
 
 
-leave_person_out_split = lambda test_person_idx: lambda recordings: leave_person_out_split_idx(
+def leave_person_out_split(test_person_idx) -> "tuple[DataSet, DataSet]": return lambda recordings: leave_person_out_split_idx(
     recordings=recordings, test_person_idx=test_person_idx
 )
 # leave_person_out_split(test_person_idx=2)(recordings) # 1-4, TODO: could be random
 
 
 # Config --------------------------------------------------------------------------------------------------------------
-preprocess = lambda recordings: Preprocessor().jens_preprocess_with_normalize(
-    recordings
-)
-windowize = lambda recordings: Windowizer(window_size=window_size).jens_windowize(
-    recordings
-)
-convert = lambda windows: Converter(n_classes=n_classes).sonar_convert(windows)
-flatten = lambda tuple_list: [item for sublist in tuple_list for item in sublist]
-test_train_split = lambda recordings: leave_person_out_split(test_person_idx=2)(
+
+
+def convert(windows): return Converter(
+    n_classes=n_classes).sonar_convert(windows)
+
+
+def flatten(tuple_list): return [
+    item for sublist in tuple_list for item in sublist]
+
+
+def test_train_split(recordings)-> "tuple[DataSet, DataSet]": return leave_person_out_split(test_person_idx=2)(
     recordings
 )
 
+
 # Load data
-recordings = settings.DATA_CONFIG.load_dataset(multiprocessing=False, limit_n_recs=10)
+recordings = data_config.load_dataset()
 
 random.seed(1678978086101)
 random.shuffle(recordings)
-
-# Preprocessing
-recordings = preprocess(recordings)
-recordings = transition_time_cut(recordings)
 
 # Test Train Split
 recordings_train, recordings_test = test_train_split(recordings)
 
 # Windowize
-windows_train, windows_test = windowize(recordings_train), windowize(recordings_test)
+windows_train, windows_test = recordings_train.windowize(window_size),recordings_test.windowize(window_size)
 
 # Convert
 X_train, y_train, X_test, y_test = tuple(
@@ -108,10 +110,12 @@ model = LeanderDeepConvLSTM(
     learning_rate=0.001,
     batch_size=32,
     wandb_config={
-        "project": "all_experiments_project",
-        "entity": "valentindoering",
-        "name": experiment_name,
+       "project": "all_experiments_project",
+       "entity": "tfiedlerdev",
+       "name": experiment_name,
     },
+    input_distribution_mean=data_config.mean,
+    input_distribution_variance=data_config.variance,
 )
 
 model.fit(X_train, y_train)

@@ -47,8 +47,8 @@ class OldLSTM(RainbowModel):
     def _create_model(self):
 
         ip = Input(shape=(self.window_size, self.n_features))
-
-        x = Permute((2, 1))(ip)
+        x = self._preprocessing_layer(ip)
+        x = Permute((2, 1))(x)
         x = LSTM(8)(x)
         x = Dropout(rate=0.4)(x)
 
