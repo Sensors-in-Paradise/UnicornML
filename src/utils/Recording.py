@@ -54,11 +54,11 @@ class Recording:
         self.subject = subject
         self.recording_index = recording_index
 
-    def windowize(self, window_size: int, features: "Union[list[str], None]" = None) -> "list[Window]":
+    def windowize(self, window_size: int, features : "Union[list[str], None]" = None) -> "list[Window]":
         windows = []
 
         sensor_frame = self.sensor_frame if features==None else self.sensor_frame[features]
-        
+       
         recording_sensor_array = (
             sensor_frame.to_numpy()
         )  # recording_sensor_array[timeaxis/row, sensoraxis/column]
@@ -106,4 +106,53 @@ class Recording:
                         break
                     start += 1
         return windows
+
+    def split_by_percentage(self, test_percentage: float) -> "list[Recording]":
+        """
+        splits the recording into two recordings, the first one is the training set, the second one is the test set
+        """
+        assert_type([(test_percentage, float)])
+        assert 0 <= test_percentage <= 1, "test_percentage has to be between 0 and 1"
+
+        #find index to split at
+        split_index = int(len(self.activities) * (1 - test_percentage))
+
+        #gather test data
+        test_sensor_frame = self.sensor_frame.iloc[split_index:,:]
+        test_time_frame = self.time_frame.iloc[split_index:]
+        test_activities = self.activities.iloc[split_index:]
+        #reindex test data
+        test_sensor_frame.index = range(len(self.activities) - split_index)
+        test_time_frame.index = range(len(self.activities) - split_index)
+        test_activities.index = range(len(self.activities) - split_index)
+
+        #create test recordings
+        test_recording = Recording(
+            sensor_frame=test_sensor_frame,
+            time_frame=test_time_frame,
+            activities=test_activities,
+            subject=self.subject,
+            recording_index=self.recording_index,
+        )
+
+        #gather training data
+        train_sensor_frame = self.sensor_frame.iloc[:split_index,:]
+        train_time_frame = self.time_frame.iloc[:split_index]
+        train_activities = self.activities.iloc[:split_index]
+
+        #reindex training data
+        train_sensor_frame.index = range(split_index)
+        train_time_frame.index = range(split_index)
+        train_activities.index = range(split_index)
+
+        #create training recording
+        train_recording = Recording(
+            sensor_frame=train_sensor_frame,
+            time_frame=train_time_frame,
+            activities=train_activities,
+            subject=self.subject,
+            recording_index=self.recording_index,
+        )
+
+        return [train_recording, test_recording]
 

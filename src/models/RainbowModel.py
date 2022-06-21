@@ -8,12 +8,12 @@ import numpy as np
 
 # pylint: disable=g-direct-tensorflow-import
 import tensorflow as tf
+import inspect
 import wandb
 from tensorflow.keras.utils import to_categorical  # type: ignore
 from tensorflow.python.saved_model.utils_impl import get_saved_model_pb_path  # type: ignore
 from tflite_support import metadata as _metadata
 from models.metadata_populator import MetadataPopulatorForTimeSeriesClassifier
-from loader.preprocessing import replaceNaN_ffill_tf, replaceNaN_ffill_numpy,replaceNaN_ffill_numpy3D
 from utils.folder_operations import create_folders_in_path
 from utils.typing import assert_type
 
@@ -85,8 +85,11 @@ class RainbowModel(tf.Module):
         """
 
         # per feature measures of input distribution
-        self.input_distribution_mean = kwargs["input_distribution_mean"]
-        self.input_distribution_variance = kwargs["input_distribution_variance"]
+        self.input_distribution_mean = kwargs.get(
+            "input_distribution_mean", None)
+        self.input_distribution_variance = kwargs.get(
+            "input_distribution_variance", None
+        )
 
         # input size
         self.window_size = kwargs.get("window_size", None)
@@ -102,6 +105,7 @@ class RainbowModel(tf.Module):
         self.learning_rate = kwargs.get("learning_rate", None)
         self.validation_split = kwargs.get("validation_split", 0.2)
         self.class_weight = kwargs.get("class_weight", None)
+        self.metrics = kwargs.get("metrics", ["accuracy"])
 
         # others
         self.author = kwargs.get("author", "Unknown")
@@ -121,6 +125,28 @@ class RainbowModel(tf.Module):
 
         self.model = self._create_model()
         self.model.summary()
+
+    def get_params(self) -> dict:
+        """
+        gets the parameters of the model
+        """
+        return dict(
+            window_size=self.window_size,
+            n_features=self.n_features,
+            n_outputs=self.n_outputs,
+            batch_size=self.batch_size,
+            n_epochs=self.n_epochs,
+            learning_rate=self.learning_rate,
+            validation_split=self.validation_split,
+            class_weight=self.class_weight,
+            metrics=self.metrics,
+            author=self.author,
+            version=self.version,
+            description=self.description,
+            wandb_config=self.wandb_config,
+            verbose=self.verbose,
+            kwargs=self.kwargs,
+        )
 
     def _create_model(self) -> tf.keras.Model:
         """
@@ -147,25 +173,6 @@ class RainbowModel(tf.Module):
         return x
 
     # The 'train' function takes input windows and a labels
-    @tf.function(
-        input_signature=[
-            tf.TensorSpec(shape=[None, window_size, n_features], dtype=tf.float32),
-            # Binary Classification
-            tf.TensorSpec(shape=[None, n_outputs], dtype=tf.float32),
-        ]
-    )
-    def train(self, input_windows, labels):
-        replaceNaN_ffill_tf(input_windows)
-
-        with tf.GradientTape() as tape:
-            predictions = self.model(input_windows)
-            loss = self.model.loss(labels, predictions)
-        gradients = tape.gradient(loss, self.model.trainable_variables)
-        self.model.optimizer.apply_gradients(
-            zip(gradients, self.model.trainable_variables)
-        )
-        result = {"loss": loss}
-        return result
 
     # Fit ----------------------------------------------------------------------
 
@@ -174,7 +181,8 @@ class RainbowModel(tf.Module):
         Fit the self.model to the data
         """
         assert_type(
-            [(X_train, (np.ndarray, np.generic)), (y_train, (np.ndarray, np.generic))]
+            [(X_train, (np.ndarray, np.generic)),
+             (y_train, (np.ndarray, np.generic))]
         )
         assert (
             X_train.shape[0] == y_train.shape[0]
@@ -205,7 +213,7 @@ class RainbowModel(tf.Module):
             callbacks = [wandb.keras.WandbCallback()]
 
         self.history = self.model.fit(
-            replaceNaN_ffill_numpy3D(X_train),
+            X_train,
             y_train,
             validation_split=self.validation_split,
             epochs=self.n_epochs,
@@ -216,22 +224,15 @@ class RainbowModel(tf.Module):
         )
 
     # Predict ------------------------------------------------------------------------
-    @tf.function(
-        input_signature=[
-            tf.TensorSpec(shape=[None, window_size, n_features], dtype=tf.float32),
-        ]
-    )
-    def infer(self, input_window):
-        replaceNaN_ffill_tf(input_window)
-        logits = self.model(input_window)
-        probabilities = tf.nn.softmax(logits, axis=-1)
-        return {"output": probabilities}
 
     def predict(self, X_test: np.ndarray) -> np.ndarray:
         """
         gets a list of windows and returns a list of prediction_vectors
         """
-        return self.model.predict(replaceNaN_ffill_numpy3D(X_test))
+        return self.model.predict(X_test)
+
+    def evaluate(self, X_test: np.ndarray, y_test: np.ndarray):
+        return self.model.evaluate(X_test, y_test)
 
     def export(
         self,
@@ -250,20 +251,83 @@ class RainbowModel(tf.Module):
         export_path_raw_model = os.path.join(export_path, "raw_model")
         create_folders_in_path(export_path_raw_model)
 
+        # Function signatures to export
+        @tf.function(
+            input_signature=[
+                tf.TensorSpec(
+                    shape=[None, self.window_size, self.n_features], dtype=tf.float32
+                ),
+            ]
+        )
+        def infer(input_window):
+            logits = self.model(input_window)
+            probabilities = tf.nn.softmax(logits, axis=-1)
+            return {"output": probabilities}
+
+        @tf.function(
+            input_signature=[
+                tf.TensorSpec(
+                    shape=[None, self.window_size, self.n_features], dtype=tf.float32
+                ),
+                # Binary Classification
+                tf.TensorSpec(shape=[None, self.n_outputs], dtype=tf.float32),
+            ]
+        )
+        def train(input_windows, labels):
+            # with tf.GradientTape() as tape:
+            #    predictions = self.model(input_windows)
+            #    print(self.model)
+            #    loss = self.model.compute_loss(input_windows, labels, predictions)
+            #gradients = tape.gradient(loss, self.model.trainable_variables)
+            # self.model.optimizer.apply_gradients(
+            #    zip(gradients, self.model.trainable_variables)
+            # )
+            result = {"loss": 0}  # loss
+            return result
+
+        @tf.function(input_signature=[tf.TensorSpec(shape=[], dtype=tf.string)])
+        def restore(checkpoint_path):
+            restored_tensors = {}
+            for var in self.model.weights:
+                restored = tf.raw_ops.Restore(
+                    file_pattern=checkpoint_path,
+                    tensor_name=var.name,
+                    dt=var.dtype,
+                    name="restore",
+                )
+                var.assign(restored)
+                restored_tensors[var.name] = restored
+            return restored_tensors
+
+        @tf.function(input_signature=[tf.TensorSpec(shape=[], dtype=tf.string)])
+        def save(checkpoint_path):
+            tensor_names = [weight.name for weight in self.model.weights]
+            tensors_to_save = [weight.read_value()
+                               for weight in self.model.weights]
+            tf.raw_ops.Save(
+                filename=checkpoint_path,
+                tensor_names=tensor_names,
+                data=tensors_to_save,
+                name="save",
+            )
+            return {
+                "checkpoint_path": checkpoint_path,
+            }
+
         # 1/2 Export raw model ------------------------------------------------------------
         tf.saved_model.save(
             self.model,
             export_path_raw_model,
             signatures={
-                "train": self.train.get_concrete_function(),
-                "infer": self.infer.get_concrete_function(),
-                "save": self.save.get_concrete_function(),
-                "restore": self.restore.get_concrete_function(),
+                "train": train.get_concrete_function(),
+                "infer": infer.get_concrete_function(),
+                "save": save.get_concrete_function(),
+                "restore": restore.get_concrete_function(),
             },
         )
-
         # 2/2 Convert raw model to tflite model -------------------------------------------
-        converter = tf.lite.TFLiteConverter.from_saved_model(export_path_raw_model)
+        converter = tf.lite.TFLiteConverter.from_saved_model(
+            export_path_raw_model)
 
         converter.optimizations = [tf.lite.Optimize.DEFAULT]
         converter.experimental_new_converter = True
@@ -281,34 +345,6 @@ class RainbowModel(tf.Module):
         self.populate_and_export_metadata(
             export_path, device_tags, features, class_labels
         )
-
-    @tf.function(input_signature=[tf.TensorSpec(shape=[], dtype=tf.string)])
-    def restore(self, checkpoint_path):
-        restored_tensors = {}
-        for var in self.model.weights:
-            restored = tf.raw_ops.Restore(
-                file_pattern=checkpoint_path,
-                tensor_name=var.name,
-                dt=var.dtype,
-                name="restore",
-            )
-            var.assign(restored)
-            restored_tensors[var.name] = restored
-        return restored_tensors
-
-    @tf.function(input_signature=[tf.TensorSpec(shape=[], dtype=tf.string)])
-    def save(self, checkpoint_path):
-        tensor_names = [weight.name for weight in self.model.weights]
-        tensors_to_save = [weight.read_value() for weight in self.model.weights]
-        tf.raw_ops.Save(
-            filename=checkpoint_path,
-            tensor_names=tensor_names,
-            data=tensors_to_save,
-            name="save",
-        )
-        return {
-            "checkpoint_path": checkpoint_path,
-        }
 
     def _build_model_info(
         self, device_tags: "list[str]", features: "list[str]", class_labels: "list[str]"
@@ -367,7 +403,8 @@ class RainbowModel(tf.Module):
             export_path, device_tags, features, class_labels
         )
 
-        export_model_path = os.path.join(export_path, f"{self.model_name}.tflite")
+        export_model_path = os.path.join(
+            export_path, f"{self.model_name}.tflite")
 
         # Generate the metadata objects and put them in the model file
         populator = MetadataPopulatorForTimeSeriesClassifier(
@@ -381,7 +418,8 @@ class RainbowModel(tf.Module):
 
         # Validate the output model file by reading the metadata and produce
         # a json file with the metadata under the export path
-        displayer = _metadata.MetadataDisplayer.with_model_file(export_model_path)
+        displayer = _metadata.MetadataDisplayer.with_model_file(
+            export_model_path)
         export_json_file = os.path.join(export_path, self.model_name + ".json")
         json_file = displayer.get_metadata_json()
         with open(export_json_file, "w") as f:
@@ -393,3 +431,9 @@ class RainbowModel(tf.Module):
         print(export_json_file)
         print("The associated file that has been been packed to the model is:")
         print(displayer.get_packed_associated_file_list())
+
+    def save_weights(self, checkpoint_path: str):
+        self.model.save_weights(checkpoint_path)
+
+    def load_weights(self, checkpoint_path: str):
+        self.model.load_weights(checkpoint_path)

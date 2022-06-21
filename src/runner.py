@@ -21,6 +21,6 @@ from utils import settings
 
 
 if __name__ == "__main__":
-    #import experiments.sonar_template_exp
-    import experiments.export_gait_exp
-   
+    #import experiments.export_res_net_exp
+    import experiments.transfer_learning_felix
+    #import experiments.transfer_learning_felix

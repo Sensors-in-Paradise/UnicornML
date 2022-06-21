@@ -8,7 +8,6 @@ import tensorflow.keras as keras
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
 import itertools
-from loader.preprocessing import replaceNaN_ffill
 from utils.typing import assert_type
 from utils.Window import Window
 from utils.Recording import Recording
@@ -30,7 +29,7 @@ class ResNetModel(RainbowModel):
         super().__init__(**kwargs)
 
         self.model_name = "resnet_model"
-        
+
         # create model
 
         # Refactoring idea:
@@ -40,8 +39,11 @@ class ResNetModel(RainbowModel):
         print(
             f"Building model for {self.window_size} timesteps (window_size) and {kwargs['n_features']} features"
         )
-        self.callbacks.append(keras.callbacks.ReduceLROnPlateau(
-            monitor='loss', factor=0.5, patience=50, min_lr=0.0001))
+        self.callbacks.append(
+            keras.callbacks.ReduceLROnPlateau(
+                monitor="loss", factor=0.5, patience=50, min_lr=0.0001
+            )
+        )
 
     def _create_model(self):
         n_feature_maps = 64
@@ -52,92 +54,105 @@ class ResNetModel(RainbowModel):
         # BLOCK 1
 
         conv_x = keras.layers.Conv1D(
-            filters=n_feature_maps, kernel_size=8, padding='same')(x)
+            filters=n_feature_maps, kernel_size=8, padding="same"
+        )(x)
         conv_x = keras.layers.BatchNormalization()(conv_x)
-        conv_x = keras.layers.Activation('relu')(conv_x)
+        conv_x = keras.layers.Activation("relu")(conv_x)
 
         conv_y = keras.layers.Conv1D(
-            filters=n_feature_maps, kernel_size=5, padding='same')(conv_x)
+            filters=n_feature_maps, kernel_size=5, padding="same"
+        )(conv_x)
         conv_y = keras.layers.BatchNormalization()(conv_y)
-        conv_y = keras.layers.Activation('relu')(conv_y)
+        conv_y = keras.layers.Activation("relu")(conv_y)
 
         conv_z = keras.layers.Conv1D(
-            filters=n_feature_maps, kernel_size=3, padding='same')(conv_y)
+            filters=n_feature_maps, kernel_size=3, padding="same"
+        )(conv_y)
         conv_z = keras.layers.BatchNormalization()(conv_z)
 
         # expand channels for the sum
         shortcut_y = keras.layers.Conv1D(
-            filters=n_feature_maps, kernel_size=1, padding='same')(x)
+            filters=n_feature_maps, kernel_size=1, padding="same"
+        )(x)
         shortcut_y = keras.layers.BatchNormalization()(shortcut_y)
 
         output_block_1 = keras.layers.add([shortcut_y, conv_z])
-        output_block_1 = keras.layers.Activation('relu')(output_block_1)
+        output_block_1 = keras.layers.Activation("relu")(output_block_1)
 
         # BLOCK 2
 
         conv_x = keras.layers.Conv1D(
-            filters=n_feature_maps * 2, kernel_size=8, padding='same')(output_block_1)
+            filters=n_feature_maps * 2, kernel_size=8, padding="same"
+        )(output_block_1)
         conv_x = keras.layers.BatchNormalization()(conv_x)
-        conv_x = keras.layers.Activation('relu')(conv_x)
+        conv_x = keras.layers.Activation("relu")(conv_x)
 
         conv_y = keras.layers.Conv1D(
-            filters=n_feature_maps * 2, kernel_size=5, padding='same')(conv_x)
+            filters=n_feature_maps * 2, kernel_size=5, padding="same"
+        )(conv_x)
         conv_y = keras.layers.BatchNormalization()(conv_y)
-        conv_y = keras.layers.Activation('relu')(conv_y)
+        conv_y = keras.layers.Activation("relu")(conv_y)
 
         conv_z = keras.layers.Conv1D(
-            filters=n_feature_maps * 2, kernel_size=3, padding='same')(conv_y)
+            filters=n_feature_maps * 2, kernel_size=3, padding="same"
+        )(conv_y)
         conv_z = keras.layers.BatchNormalization()(conv_z)
 
         # expand channels for the sum
         shortcut_y = keras.layers.Conv1D(
-            filters=n_feature_maps * 2, kernel_size=1, padding='same')(output_block_1)
+            filters=n_feature_maps * 2, kernel_size=1, padding="same"
+        )(output_block_1)
         shortcut_y = keras.layers.BatchNormalization()(shortcut_y)
 
         output_block_2 = keras.layers.add([shortcut_y, conv_z])
-        output_block_2 = keras.layers.Activation('relu')(output_block_2)
+        output_block_2 = keras.layers.Activation("relu")(output_block_2)
 
         # BLOCK 3
 
         conv_x = keras.layers.Conv1D(
-            filters=n_feature_maps * 2, kernel_size=8, padding='same')(output_block_2)
+            filters=n_feature_maps * 2, kernel_size=8, padding="same"
+        )(output_block_2)
         conv_x = keras.layers.BatchNormalization()(conv_x)
-        conv_x = keras.layers.Activation('relu')(conv_x)
+        conv_x = keras.layers.Activation("relu")(conv_x)
 
         conv_y = keras.layers.Conv1D(
-            filters=n_feature_maps * 2, kernel_size=5, padding='same')(conv_x)
+            filters=n_feature_maps * 2, kernel_size=5, padding="same"
+        )(conv_x)
         conv_y = keras.layers.BatchNormalization()(conv_y)
-        conv_y = keras.layers.Activation('relu')(conv_y)
+        conv_y = keras.layers.Activation("relu")(conv_y)
 
         conv_z = keras.layers.Conv1D(
-            filters=n_feature_maps * 2, kernel_size=3, padding='same')(conv_y)
+            filters=n_feature_maps * 2, kernel_size=3, padding="same"
+        )(conv_y)
         conv_z = keras.layers.BatchNormalization()(conv_z)
 
         # no need to expand channels because they are equal
         shortcut_y = keras.layers.BatchNormalization()(output_block_2)
 
         output_block_3 = keras.layers.add([shortcut_y, conv_z])
-        output_block_3 = keras.layers.Activation('relu')(output_block_3)
+        output_block_3 = keras.layers.Activation("relu")(output_block_3)
 
         # FINAL
 
         gap_layer = keras.layers.GlobalAveragePooling1D()(output_block_3)
 
-        output_layer = keras.layers.Dense(
-            self.n_outputs, activation='softmax')(gap_layer)
+        output_layer = keras.layers.Dense(self.n_outputs, activation="softmax")(
+            gap_layer
+        )
 
         model = keras.models.Model(inputs=input_layer, outputs=output_layer)
 
-        model.compile(loss=tf.keras.losses.CategoricalCrossentropy(), optimizer=keras.optimizers.Adam(),
-                      metrics=['accuracy'])
+        model.compile(
+            loss=tf.keras.losses.CategoricalCrossentropy(),
+            optimizer=keras.optimizers.Adam(),
+            metrics=self.metrics,
+        )
 
         return model
 
     def _windowize_recording(self, recording: "Recording") -> "list[Window]":
         windows = []
-        recording_sensor_array = (
-            recording.sensor_frame.to_numpy()
-        )
+        recording_sensor_array = recording.sensor_frame.to_numpy()
         activities = recording.activities.to_numpy()
 
         start = 0
@@ -151,18 +166,22 @@ class ResNetModel(RainbowModel):
 
             # has planned window the same activity in the beginning and the end?
             if (
-                len(set(activities[start: (end + 1)])) == 1
+                len(set(activities[start : (end + 1)])) == 1
             ):  # its important that the window is small (otherwise can change back and forth) # activities[start] == activities[end] a lot faster probably
                 window_sensor_array = recording_sensor_array[
-                    start: (end + 1), :
+                    start : (end + 1), :
                 ]  # data[timeaxis/row, featureaxis/column] data[1, 2] gives specific value, a:b gives you an interval
                 activity = activities[start]  # the first data point is enough
                 start += (
                     self.window_size // 2
                 )  # 50% overlap!!!!!!!!! - important for the waste calculation
                 windows.append(
-                    Window(window_sensor_array, int(activity),
-                           recording.subject, recording.recording_index)
+                    Window(
+                        window_sensor_array,
+                        int(activity),
+                        recording.subject,
+                        recording.recording_index,
+                    )
                 )
 
             # if the frame contains different activities or from different objects, find the next start point

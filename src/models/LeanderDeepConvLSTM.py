@@ -63,9 +63,9 @@ class LeanderDeepConvLSTM(RainbowModel):
 
         model = Model(i, x)
         model.compile(
-            optimizer="RMSprop",
+            optimizer=keras.optimizers.Adam(learning_rate=self.learning_rate),
             # CategoricalCrossentropy (than we have to to the one hot encoding - to_categorical), before: "sparse_categorical_crossentropy"
-            loss="CategoricalCrossentropy",
+            loss=keras.losses.CategoricalCrossentropy(),
             metrics=["accuracy"],
         )
 

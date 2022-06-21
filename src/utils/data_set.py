@@ -1,3 +1,4 @@
+import re
 from utils.array_operations import split_list_by_percentage
 from utils.typing import assert_type
 from utils.Recording import Recording
@@ -6,6 +7,7 @@ import numpy as np
 from utils.typing import assert_type
 import itertools
 from tensorflow.keras.utils import to_categorical
+from scipy.signal import resample
 import pandas as pd
 import os
 import matplotlib.pyplot as plt
@@ -24,7 +26,7 @@ class DataSet(list):
             assert data_config != None, "You have not passed any data to this data set. In this case you must pass a data_config which is not None"
             self.data_config = data_config
 
-    def windowize(self, window_size: int, features : "Union[list[str], None]" = None) -> "list[Window]":
+    def windowize(self, window_size: int) -> "list[Window]":
         """
         Jens version of windowize
         - no stride size default overlapping 50 percent
@@ -44,7 +46,7 @@ class DataSet(list):
         # Refactoring idea (speed): Mulitprocessing https://stackoverflow.com/questions/20190668/multiprocessing-a-for-loop/20192251#20192251
         print("windowizing in progress ....")
         recording_windows = list(
-            map(lambda recording: recording.windowize(window_size, features), self)
+            map(lambda recording: recording.windowize(window_size), self)
         )
         print("windowizing done")
         return list(
@@ -116,9 +118,18 @@ class DataSet(list):
         plt.savefig(os.path.join(dirPath, fileName))
 
     def split_by_percentage(self, test_percentage: float) -> "tuple[DataSet, DataSet]":
-        recordings_train, recordings_test = split_list_by_percentage(
-            list_to_split=self, percentage_to_split=test_percentage
-        )
+        if len(self) <= 8: #TODO: check for the number of classes and split for each of the class recordings individually
+            recordings_test = []
+            recordings_train = []
+            for recording in self:
+                recording_train,recording_test = recording.split_by_percentage(test_percentage)
+                recordings_train.append(recording_train)
+                recordings_test.append(recording_test)
+        else:  
+            recordings_train, recordings_test = split_list_by_percentage(
+                list_to_split=self, percentage_to_split=test_percentage
+            )
+        print(f"amount of recordings_train: {len(recordings_train)}\n amount of recordings_test: {len(recordings_test)}")
         return DataSet(recordings_train, self.data_config), DataSet(recordings_test, self.data_config)
 
     def convert_windows_sonar(
@@ -189,3 +200,30 @@ class DataSet(list):
         )
         print(f"n_total_timesteps: {n_total_timesteps}")
         print(f"n_wasted_timesteps: {n_wasted_timesteps}")
+
+    def replaceNaN_ffill(self):
+        """
+        the recordings have None values, this function replaces them with the last non-NaN value of the feature
+        """
+        assert_type([(self[0], Recording)])
+        fill_method = "ffill"
+        for recording in self:
+            recording.sensor_frame = recording.sensor_frame.fillna(
+                method=fill_method)
+            recording.sensor_frame = recording.sensor_frame.fillna(
+                0)
+    
+    def resample(self, target_sampling_rate: float):
+        """
+        resamples the recordings to the target sampling rate
+        """
+        assert_type([(self[0], Recording)])
+        for recording in self:
+            recording.sensor_frame = pd.DataFrame(resample(
+                    x=recording.sensor_frame,
+                    num=int(target_sampling_rate * recording.sensor_frame.shape[0]),
+                ))
+            recording.time_frame = pd.Series(resample(
+                    x=recording.time_frame,
+                    num=int(target_sampling_rate * recording.time_frame.shape[0]),
+                ))

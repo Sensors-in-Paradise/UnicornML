@@ -20,7 +20,7 @@ from models.RainbowModel import RainbowModel
 from models.ResNetModel import ResNetModel
 from utils.filter_activities import filter_activities
 from utils.folder_operations import new_saved_experiment_folder
-from utils.DataConfig import Sonar22CategoriesConfig, OpportunityConfig
+from data_configs.DataConfig import Sonar22CategoriesConfig, OpportunityConfig
 from tensorflow.keras.layers import (Dense)
 import matplotlib.pyplot as plt
 
