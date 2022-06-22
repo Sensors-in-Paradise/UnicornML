@@ -48,17 +48,20 @@ class DataConfig:
             del kwargs["features"]
 
         recordings = self._load_dataset(**kwargs)
+
+        for recording in recordings:
+            if features != None:
+                recording.sensor_frame = recording.sensor_frame[features]
+
+            recording.sensor_frame = recording.sensor_frame.fillna(
+                method="ffill")
+
         variance, mean = self._loadDataSetMeasures()
         if variance is None or mean is None:
             print(
-            "Calculating mean and variance of whole dataset once. This can take a while...")
+                "Calculating mean and variance of whole dataset once. This can take a while...")
             startTime = datetime.now()
-            for recording in recordings:
-                if features != None:
-                    recording.sensor_frame = recording.sensor_frame[features]
 
-                recording.sensor_frame = recording.sensor_frame.fillna(
-                    method="ffill")
             sensor_frames = tf.constant(np.concatenate(
                 [recording.sensor_frame.to_numpy() for recording in recordings], axis=0))
             layer = tf.keras.layers.Normalization(axis=-1)
@@ -78,7 +81,7 @@ class DataConfig:
         return ds
 
     # interface (subclass responsibility to define) ------------------------------------------------------------
-    def _load_dataset(self,**kwargs) -> "list[Recording]":
+    def _load_dataset(self, **kwargs) -> "list[Recording]":
         raise NotImplementedError(
             "init subclass of Config that defines the method activity_idx_to_activity_name"
         )
@@ -167,4 +170,4 @@ class DataConfig:
         return {}
 
     def _getDataConfigIdentifier(self):
-        return type(self).__name__ + self.dataset_path + ", ".join(self.features) if self.features!=None else ""
+        return type(self).__name__ + self.dataset_path + ", ".join(self.features) if self.features != None else ""
