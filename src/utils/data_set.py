@@ -1,3 +1,4 @@
+import re
 from utils.array_operations import split_list_by_percentage
 from utils.typing import assert_type
 from utils.Recording import Recording
@@ -6,21 +7,23 @@ import numpy as np
 from utils.typing import assert_type
 import itertools
 from tensorflow.keras.utils import to_categorical
+from scipy.signal import resample
 import pandas as pd
 import os
 import matplotlib.pyplot as plt
 from typing import Union
 
+
 class DataSet(list):
-    def __init__(self, data: "Union[list[Recording], DataSet]" = None, data_config = None):
+    def __init__(self, data: "Union[list[Recording], DataSet]" = None, data_config=None):
         if not data is None:
             self.extend(data)
             if isinstance(data, DataSet):
                 self.data_config = data.data_config
-            else: 
+            else:
                 assert data_config != None, "You have passed data as a list of recordings. In this case you must also pass a data_config which is not None"
                 self.data_config = data_config
-        else: 
+        else:
             assert data_config != None, "You have not passed any data to this data set. In this case you must pass a data_config which is not None"
             self.data_config = data_config
 
@@ -49,7 +52,7 @@ class DataSet(list):
         print("windowizing done")
         return list(
             itertools.chain.from_iterable(recording_windows)
-        )  # flatten (reduce dimension)    
+        )  # flatten (reduce dimension)
 
     def split_leave_subject_out(self, test_subject) -> "tuple[DataSet, DataSet]":
         recordings_train = list(
@@ -61,16 +64,18 @@ class DataSet(list):
         return DataSet(recordings_train, self.data_config), DataSet(recordings_test, self.data_config)
 
     def split_by_subjects(self, subjectsForListA: "list[str]") -> "tuple[DataSet, DataSet]":
-        """ 
-        Splits the recordings into a tuple of 
-            - a sublist of recordings of subjects in subjectsForListA 
+        """
+        Splits the recordings into a tuple of
+            - a sublist of recordings of subjects in subjectsForListA
             - the recordings of the subjects not in subjectsForListA
         """
-        a = list(filter(lambda recording: recording.subject in subjectsForListA, self))
-        b = list(filter(lambda recording: recording.subject not in subjectsForListA, self))
+        a = list(
+            filter(lambda recording: recording.subject in subjectsForListA, self))
+        b = list(
+            filter(lambda recording: recording.subject not in subjectsForListA, self))
         return DataSet(a, self.data_config), DataSet(b, self.data_config)
 
-    def count_activities_per_subject(self)-> "pd.DataFrame":
+    def count_activities_per_subject(self) -> "pd.DataFrame":
         values = pd.DataFrame(
             {self[0].subject: self[0].activities.value_counts()})
         for rec in self[1:]:
@@ -116,16 +121,20 @@ class DataSet(list):
         plt.savefig(os.path.join(dirPath, fileName))
 
     def split_by_percentage(self, test_percentage: float) -> "tuple[DataSet, DataSet]":
-        if len(self) == 2: #TODO: check for the number of classes and split for each of the class recordings individually
-            recordings_train0, recordings_test0 = self[0].split_by_percentage(test_percentage)
-            recordings_train1, recordings_test1 = self[1].split_by_percentage(test_percentage)
-            recordings_train = [recordings_train0, recordings_train1]
-            recordings_test = [recordings_test0, recordings_test1]
-        else:  
+        if len(self) <= 8:  # TODO: check for the number of classes and split for each of the class recordings individually
+            recordings_test = []
+            recordings_train = []
+            for recording in self:
+                recording_train, recording_test = recording.split_by_percentage(
+                    test_percentage)
+                recordings_train.append(recording_train)
+                recordings_test.append(recording_test)
+        else:
             recordings_train, recordings_test = split_list_by_percentage(
                 list_to_split=self, percentage_to_split=test_percentage
             )
-        print(f"amount of recordings_train: {len(recordings_train)}\n amount of recordings_test: {len(recordings_test)}")
+        print(
+            f"amount of recordings_train: {len(recordings_train)}\n amount of recordings_test: {len(recordings_test)}")
         return DataSet(recordings_train, self.data_config), DataSet(recordings_test, self.data_config)
 
     def convert_windows_sonar(
@@ -160,6 +169,7 @@ class DataSet(list):
             activities = recording.activities.to_numpy()
             change_idxs = np.where(activities[:-1] != activities[1:])[0] + 1
             # (overlapping amount self.window_size // 2 from the algorithm!)
+
             def get_n_wasted_timesteps(label_len):
                 return (
                     (label_len - window_size) % (window_size // 2)
@@ -189,7 +199,8 @@ class DataSet(list):
             minutes_remaining = int(minutes % 60)
             return f"{hours}h {minutes_remaining}m"
 
-        n_total_timesteps = sum(map(lambda recording: len(recording.activities), self))
+        n_total_timesteps = sum(
+            map(lambda recording: len(recording.activities), self))
         n_wasted_timesteps = sum(map(n_wasted_timesteps_jens_windowize, self))
         print(
             f"=> jens_windowize_monitoring (total recording time)\n\tbefore: {to_hours_str(n_total_timesteps)}\n\tafter: {to_hours_str(n_total_timesteps - n_wasted_timesteps)}"
@@ -207,4 +218,27 @@ class DataSet(list):
             recording.sensor_frame = recording.sensor_frame.fillna(
                 method=fill_method)
             recording.sensor_frame = recording.sensor_frame.fillna(
+<< << << < HEAD
                 0)
+
+
+== == == =
+                0)
+
+    def resample(self, target_sampling_rate: float):
+        """
+        resamples the recordings to the target sampling rate
+        """
+        assert_type([(self[0], Recording)])
+        for recording in self:
+            recording.sensor_frame=pd.DataFrame(resample(
+                    x=recording.sensor_frame,
+                    num=int(target_sampling_rate *
+                            recording.sensor_frame.shape[0]),
+                ))
+            recording.time_frame=pd.Series(resample(
+                    x=recording.time_frame,
+                    num=int(target_sampling_rate *
+                            recording.time_frame.shape[0]),
+                ))
+>> >>>> > felix-ba
