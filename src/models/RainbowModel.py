@@ -16,7 +16,7 @@ from tflite_support import metadata as _metadata
 from models.metadata_populator import MetadataPopulatorForTimeSeriesClassifier
 from utils.folder_operations import create_folders_in_path
 from utils.typing import assert_type
-
+from tensorflow.keras.layers import (Dense)
 
 class TimeSeriesModelSpecificInfo(object):
     """Holds information that is specifically tied to a time series classifier"""
@@ -437,3 +437,8 @@ class RainbowModel(tf.Module):
 
     def load_weights(self, checkpoint_path: str):
         self.model.load_weights(checkpoint_path)
+
+    def freeze_non_dense_layers(self):
+        # Set non dense layers to not trainable (freezing them)
+        for layer in self.model.layers:
+            layer.trainable = type(layer) == Dense
