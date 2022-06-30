@@ -114,6 +114,7 @@ class RainbowModel(tf.Module):
         self.description = self._create_description()
         self.wandb_config = kwargs.get("wandb_config", None)
         self.verbose = kwargs.get("verbose", 1)
+        self.model_name = kwargs.get("name", "model")
         self.kwargs = kwargs
 
         # Important declarations

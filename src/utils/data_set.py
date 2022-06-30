@@ -217,13 +217,7 @@ class DataSet(list):
         for recording in self:
             recording.sensor_frame = recording.sensor_frame.fillna(
                 method=fill_method)
-            recording.sensor_frame = recording.sensor_frame.fillna(
-<< << << < HEAD
-                0)
-
-
-== == == =
-                0)
+            recording.sensor_frame = recording.sensor_frame.fillna(0)
 
     def resample(self, target_sampling_rate: float):
         """
@@ -231,14 +225,13 @@ class DataSet(list):
         """
         assert_type([(self[0], Recording)])
         for recording in self:
-            recording.sensor_frame=pd.DataFrame(resample(
-                    x=recording.sensor_frame,
-                    num=int(target_sampling_rate *
-                            recording.sensor_frame.shape[0]),
-                ))
-            recording.time_frame=pd.Series(resample(
-                    x=recording.time_frame,
-                    num=int(target_sampling_rate *
-                            recording.time_frame.shape[0]),
-                ))
->> >>>> > felix-ba
+            recording.sensor_frame = pd.DataFrame(resample(
+                x=recording.sensor_frame,
+                num=int(target_sampling_rate *
+                        recording.sensor_frame.shape[0]),
+            ))
+            recording.time_frame = pd.Series(resample(
+                x=recording.time_frame,
+                num=int(target_sampling_rate *
+                        recording.time_frame.shape[0]),
+            ))
