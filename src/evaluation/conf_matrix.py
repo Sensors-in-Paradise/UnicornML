@@ -56,3 +56,4 @@ def create_conf_matrix(path: str, y_test_pred: np.ndarray, y_test_true: np.ndarr
 
     # Save
     plt.savefig(os.path.join(path, f"{file_name}.png"))
+    plt.close()

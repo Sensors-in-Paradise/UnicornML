@@ -24,7 +24,7 @@ from tensorflow.keras.layers import (
 )
 
 
-class FranzDeepConvLSTM(RainbowModel):
+class DeepConvLSTM(RainbowModel):
     """
     Based on https://machinelearningmastery.com/deep-learning-models-for-human-activity-recognition
     """
@@ -37,7 +37,7 @@ class FranzDeepConvLSTM(RainbowModel):
         # x = self._preprocessing_layer(x)
         x = Reshape((self.window_size, self.n_features, 1))(x)
         x = Dropout(0.4)(x)
-        for n_filter in [32, 64]:
+        for n_filter in [64, 64, 64, 64]:
             x = Conv2D(
                 filters=n_filter, kernel_size=(5, 1), strides=(5, 1), activation="relu"
             )(x)

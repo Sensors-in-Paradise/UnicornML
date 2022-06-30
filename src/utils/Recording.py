@@ -156,3 +156,79 @@ class Recording:
 
         return [train_recording, test_recording]
 
+    def split_by_indexes(self, index: list) -> list:
+        """
+        splits the recording into two recordings, the first one is the training set, the second one is the test set
+        """
+        assert_type([(index, list)])
+        assert len(index) == 2, "index has to be a list of two indices"
+        assert index[0] < index[1], "index[0] has to be smaller than index[1]"
+
+        #gather test data
+        test_sensor_frame = self.sensor_frame.iloc[index[0]:index[1],:]
+        test_time_frame = self.time_frame.iloc[index[0]:index[1]:]
+        test_activities = self.activities.iloc[index[0]:index[1]:]
+        #reindex test data
+        test_sensor_frame.index = range((index[1] - index[0]))
+        test_time_frame.index = range((index[1] - index[0]))
+        test_activities.index = range((index[1] - index[0]))
+
+        #create test recordings
+        test_recording = Recording(
+            sensor_frame=test_sensor_frame,
+            time_frame=test_time_frame,
+            activities=test_activities,
+            subject=self.subject,
+            recording_index=self.recording_index,
+        )
+        if index[0] == 0:
+            first_train_recording = None
+        else:
+            
+            #gather training data
+            first_train_sensor_frame = self.sensor_frame.iloc[:index[0],:]
+            first_train_time_frame = self.time_frame.iloc[:index[0]:]
+            first_train_activities = self.activities.iloc[:index[0]:]
+
+            #reindex training data
+            first_train_sensor_frame.index = range(index[0])
+            first_train_time_frame.index = range(index[0])
+            first_train_activities.index = range(index[0])
+
+            #create first training recording
+            first_train_recording = Recording(
+                sensor_frame=first_train_sensor_frame,
+                time_frame=first_train_time_frame,
+                activities=first_train_activities,
+                subject=self.subject,
+                recording_index=self.recording_index,
+            )
+        if index[1] == len(self.activities):
+            second_train_recording = None
+        else:
+            #gather second training data
+            print(self.sensor_frame.shape)
+            print(self.time_frame.shape)
+            print(self.activities.shape)
+            second_train_sensor_frame = self.sensor_frame.iloc[index[1]:,:]
+            second_train_time_frame = self.time_frame.iloc[index[1]:]
+            second_train_activities = self.activities.iloc[index[1]:]
+            print(index)
+            print(second_train_sensor_frame.shape)
+            print(len(self.activities) - index[1])
+            #reindex training data
+            second_train_sensor_frame.index = range(len(self.sensor_frame) - index[1])
+            second_train_time_frame.index = range(len(self.time_frame) - index[1])
+            second_train_activities.index = range(len(self.activities) - index[1])
+            
+            #create second training recording
+            second_train_recording = Recording(
+                sensor_frame=second_train_sensor_frame,
+                time_frame=second_train_time_frame,
+                activities=second_train_activities,
+                subject=self.subject,
+                recording_index=self.recording_index,
+            )
+
+        return [first_train_recording, second_train_recording, test_recording]
+

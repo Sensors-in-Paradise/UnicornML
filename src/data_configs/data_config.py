@@ -1,4 +1,5 @@
 from datetime import datetime
+import re
 from utils.data_set import DataSet
 
 from utils.Recording import Recording
@@ -14,6 +15,7 @@ import pandas as pd
 from dataclasses import dataclass
 import tensorflow as tf
 import math
+import matplotlib.pyplot as plt
 
 
 @dataclass
@@ -48,20 +50,23 @@ class DataConfig:
             del kwargs["features"]
 
         recordings = self._load_dataset(**kwargs)
-
+        variance, mean = self._loadDataSetMeasures()
+        # Plot replacement of nan
+        plotted_nan = False
         for recording in recordings:
             if features != None:
                 recording.sensor_frame = recording.sensor_frame[features]
-
-            recording.sensor_frame = recording.sensor_frame.fillna(
-                method="ffill")
-
-        variance, mean = self._loadDataSetMeasures()
+            print(f"Replacing NaNs...")
+            if recording.sensor_frame.isnull().values.any() and not plotted_nan:
+                # Get first column with nan
+                self._replace_and_plot_nan(recording.sensor_frame)
+            else:
+                recording.sensor_frame = recording.sensor_frame.fillna(
+                    method="ffill").fillna(method="bfill")
         if variance is None or mean is None:
             print(
                 "Calculating mean and variance of whole dataset once. This can take a while...")
             startTime = datetime.now()
-
             sensor_frames = tf.constant(np.concatenate(
                 [recording.sensor_frame.to_numpy() for recording in recordings], axis=0))
             layer = tf.keras.layers.Normalization(axis=-1)
@@ -171,3 +176,21 @@ class DataConfig:
 
     def _getDataConfigIdentifier(self):
         return type(self).__name__ + self.dataset_path + ", ".join(self.features) if self.features != None else ""
+
+    def _replace_and_plot_nan(self, df : pd.DataFrame):
+        first_nan_col = df.loc[:, df.isna().any()].columns[0]
+        nan_index = df.loc[:,first_nan_col].loc[df.loc[:,first_nan_col].isna()].index[0]
+        slice = self._get_nan_col_slice(df, first_nan_col, nan_index)
+        x = np.linspace(0, slice.size - 1, slice.size)
+        y = np.array(slice)
+        df = df.fillna(
+            method="ffill").fillna(method="bfill")
+        y_new = np.array(self._get_nan_col_slice(df, first_nan_col, nan_index))
+        plt.plot(x, y, 'g.-')
+        plt.savefig('before.png')
+        plt.show()
+        plt.plot(x, y_new, 'r.-')
+        plt.savefig('after.png')
+        plt.show()
+    def _get_nan_col_slice(self, df: pd.DataFrame, first_nan_col, nan_index: int):
+         return df.loc[:,first_nan_col].iloc[nan_index-50:nan_index+50]

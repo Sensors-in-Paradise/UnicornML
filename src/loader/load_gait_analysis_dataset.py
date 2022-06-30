@@ -1,8 +1,16 @@
 import pandas as pd
 import os
+
+from sklearn.utils import resample
 from utils.Recording import Recording
 
 def load_gait_analysis_dataset(path: str, subs: list) -> "list[Recording]":
+    """
+    Loads the gait analysis dataset.
+    :param path: Path to the dataset.
+    :param subs: List of subjects to load.
+    :return: List of recordings.
+    """
     recordings = []
 
     recording_folders = os.listdir(path)
