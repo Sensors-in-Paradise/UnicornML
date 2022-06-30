@@ -3,7 +3,6 @@ from models.RainbowModel import RainbowModel
 from itertools import product
 from sklearn.model_selection import KFold
 import numpy as np
-import operator
 
 
 class BestPerformer:
@@ -26,7 +25,8 @@ class GridSearchCV:
         self.parameters = parameters
         self.cv_results_ = dict()
         self.best_performer = None
-
+        self.best_model = None
+    
     def _permutations(self) -> dict:
         """Returns all possible combinations of parameters"""
         permutations = []
@@ -40,7 +40,7 @@ class GridSearchCV:
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> dict:
         """Fits the model on the training data and returns the best parameters"""
-        scores = dict()
+        self.cv_results_["perm_scores"] = []
         self.cv_results_["mean_test_score"] = []
         self.cv_results_["std_test_score"] = []
         self.cv_results_["params"] = []
@@ -48,10 +48,10 @@ class GridSearchCV:
 
         # iterate over all permutations and fit the model for each permutation
         for permutation in self._permutations():
+            perm_scores = []
             print(f"Fitting model with parameters: {permutation}")
             # setup kfold cross validation
-            kf = KFold(n_splits=4, shuffle=False)
-            perm_scores = []
+            kf = KFold(n_splits=5, shuffle=False)
             # iterate over all folds
             for train_index, test_index in kf.split(X, y):
                 # split data into train and test
@@ -69,14 +69,15 @@ class GridSearchCV:
                 perm_scores.append(score)
                 # update best performer if needed
                 if score > best_performer.score:
-                     best_performer = BestPerformer(permutation, score)
+                    best_performer = BestPerformer(permutation, score)
 
             # append mean and std of scores to cv_results_
             mean_score = np.mean(perm_scores)
             self.cv_results_["mean_test_score"].append(mean_score)
             self.cv_results_["std_test_score"].append(np.std(perm_scores))
             self.cv_results_["params"].append(permutation)
-            scores[new_params["name"]] = [mean_score, new_params]
+            self.cv_results_["perm_scores"].append(perm_scores)
+            
         self.best_performer = best_performer
         klass = self.model.__class__
         new_params = self.model.get_params()

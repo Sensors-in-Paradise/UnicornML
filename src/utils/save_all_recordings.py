@@ -2,6 +2,7 @@ from fileinput import filename
 from utils.Recording import Recording
 import os
 import pandas as pd
+import re
 
 
 def save_all_recordings(recordings: 'list[Recording]', folder_path: str, file_name: str) -> None:
@@ -36,6 +37,46 @@ def save_all_recordings(recordings: 'list[Recording]', folder_path: str, file_na
     complete_dataframe.to_csv(path, index=False)
     print('Saved recordings to ' + path)
 
+def merge_all_gait_recordings(folder_path: str) -> None:
+    """
+    Merge all gait recordings from a folder into a single csv file.
+    """
+    for (run_index, run) in enumerate(os.listdir(folder_path)):
+        run_folder_path = os.path.join(folder_path, run)
+        if not re.match(r'(^OG_[dt_|st_][control|fatigue])', run):
+                continue
+        for (sub_index, sub) in enumerate(os.listdir(run_folder_path)):
+            if not re.match(r'(^sub_[0-1][0-9])', sub):
+                continue
+            idx = 0
+            sub_folder_path = os.path.join(run_folder_path, sub, 'cut_by_stride')
+            print(f"Overwriting {os.path.join(sub_folder_path, 'merged.csv')}")
+            try:
+                os.remove(os.path.join(sub_folder_path, 'merged.csv'))
+            except FileNotFoundError:
+                pass
+            complete_dataframe = pd.DataFrame()
+            complete_dataframe[f"SampleTimeFine"] = pd.Series()
+            print(f"Initializing a main dataframe")
+            for (sensor_index, sensor) in enumerate(["LF", "RF", "SA"]):
+                print(f'Adding sensor {sensor_index} to the main dataframe')
+                sensor_path = os.path.join(sub_folder_path, f"{sensor}.csv")
+                sensor_data = pd.read_csv(sensor_path, engine='python')
+                complete_dataframe[f"GYR_X_{sensor}"] = sensor_data["GyrX"]
+                complete_dataframe[f"GYR_Y_{sensor}"] = sensor_data["GyrY"]
+                complete_dataframe[f"GYR_Z_{sensor}"] = sensor_data["GyrZ"]
+                complete_dataframe[f"ACC_X_{sensor}"] = sensor_data["AccX"]
+                complete_dataframe[f"ACC_Y_{sensor}"] = sensor_data["AccY"]
+                complete_dataframe[f"ACC_Z_{sensor}"] = sensor_data["AccZ"]
+                complete_dataframe[f"SampleTimeFine"] = sensor_data["timestamp"]
+            activity = 0 if(run.endswith('_control')) else 1
+            complete_dataframe['subject'] = sub
+            complete_dataframe['activities'] = pd.Series([activity] * len(complete_dataframe[f"SampleTimeFine"]))
+            complete_dataframe['rec_index'] = run_index * len(os.listdir(run_folder_path)) + sub_index
+            sub_target_path = os.path.join(sub_folder_path, f"merged.csv")
+            print(f"Saving the main dataframe to {sub_target_path}, will take some time ...")
+            complete_dataframe.to_csv(sub_target_path, index=False)
+            print('Saved recordings to ' + sub_target_path)
 
 def load_all_recordings(path_to_load: str) -> 'list[Recording]':
     """
@@ -67,3 +108,6 @@ def load_all_recordings(path_to_load: str) -> 'list[Recording]':
 
     print(f'Loaded {len(recordings)} recordings from {path_to_load}')
     return recordings
+
+p = '..'
+merge_all_gait_recordings(os.path.join(p, p, "data", "fatigue_dual_task"))
