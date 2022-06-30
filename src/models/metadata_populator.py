@@ -72,8 +72,6 @@ class MetadataPopulatorForTimeSeriesClassifier(object):
         input_meta.content.contentProperties.contentPropertiesType = (
             _metadata_fb.ContentProperties.FeatureProperties
         )
-        input_meta.processUnits = []
-
         # Creates output info.
         output_meta = _metadata_fb.TensorMetadataT()
         output_meta.name = "probability"

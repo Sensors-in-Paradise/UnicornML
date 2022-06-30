@@ -21,6 +21,10 @@ from utils import settings
 
 
 if __name__ == "__main__":
-    #import experiments.export_res_net_exp
-    import experiments.transfer_learning_felix
+    import experiments.export_res_net_exp
+    # import tests.test_nan_replace
     #import experiments.transfer_learning_felix
+    #import experiments.choose_best_model_exp_felix
+    #import utils.save_all_recordings
+    #import experiments.transfer_learning_lab
+    #import experiments.test_exp.py

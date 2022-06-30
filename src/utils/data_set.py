@@ -1,4 +1,5 @@
 import re
+from xmlrpc.client import Boolean
 from utils.array_operations import split_list_by_percentage
 from utils.typing import assert_type
 from utils.Recording import Recording
@@ -7,7 +8,7 @@ import numpy as np
 from utils.typing import assert_type
 import itertools
 from tensorflow.keras.utils import to_categorical
-from scipy.signal import resample
+from scipy import signal
 import pandas as pd
 import os
 import matplotlib.pyplot as plt
@@ -117,8 +118,8 @@ class DataSet(list):
         plt.ylabel("y")
         plt.savefig(os.path.join(dirPath, fileName))
 
-    def split_by_percentage(self, test_percentage: float) -> "tuple[DataSet, DataSet]":
-        if len(self) <= 8: #TODO: check for the number of classes and split for each of the class recordings individually
+    def split_by_percentage(self, test_percentage: float, intra: Boolean = False) -> "tuple[DataSet, DataSet]":
+        if intra: #TODO: check for the number of classes and split for each of the class recordings individually
             recordings_test = []
             recordings_train = []
             for recording in self:
@@ -130,6 +131,44 @@ class DataSet(list):
                 list_to_split=self, percentage_to_split=test_percentage
             )
         print(f"amount of recordings_train: {len(recordings_train)}\n amount of recordings_test: {len(recordings_test)}")
+        return DataSet(recordings_train, self.data_config), DataSet(recordings_test, self.data_config)
+
+    def intra_kfold_split(self, k):
+        """
+        Splits each of the recordings into k folds and returns the indexes of each split.
+        """
+        assert_type([(self[0], Recording)])
+        split_indexes = [[] for elem in range(k)]
+        for i in range(k):
+            for recording in self:
+                split_indexes[i].append([(recording.sensor_frame.shape[0]*i)//k, (recording.sensor_frame.shape[0]*(i+1))//k])
+        return split_indexes
+    
+    def intra_split_by_indexes(self, indexes):
+        recordings_train = []
+        recordings_test = []
+        print(indexes)
+        for idx, recording in enumerate(self):
+            first_recording_train, second_recording_train, recording_test = recording.split_by_indexes(indexes[idx])
+            if first_recording_train is not None:
+                recordings_train.append(first_recording_train)
+            if second_recording_train is not None:
+                recordings_train.append(second_recording_train)
+            recordings_test.append(recording_test)
+            
+        return DataSet(recordings_train, self.data_config), DataSet(recordings_test, self.data_config)
+
+    def split_by_indexes(self, train_indexes):
+        assert_type([(self[0], Recording)])
+        recordings_train = []
+        recordings_test = []
+        
+        for idx, recording in enumerate(self):
+            if idx in train_indexes:
+                recordings_train.append(recording)
+            else:
+                recordings_test.append(recording)
+            
         return DataSet(recordings_train, self.data_config), DataSet(recordings_test, self.data_config)
 
     def convert_windows_sonar(
@@ -213,17 +252,80 @@ class DataSet(list):
             recording.sensor_frame = recording.sensor_frame.fillna(
                 0)
     
-    def resample(self, target_sampling_rate: float):
+    def resample(self, target_sampling_rate: int, base_sampling_rate: int, show_plot: Boolean = False, path: str = None):
         """
         resamples the recordings to the target sampling rate
         """
         assert_type([(self[0], Recording)])
+        if show_plot == True:
+            x = np.linspace(0, 1, base_sampling_rate)
+            y = np.array(self[0].sensor_frame.iloc[:,0])[:base_sampling_rate]
+            
+            x_time = np.linspace(0, 1, base_sampling_rate//10)
+            y_time = np.array(self[0].time_frame)[:base_sampling_rate//10]
+
+            x_activities = np.linspace(0, 1, base_sampling_rate//10)
+            y_activities = np.array(self[0].activities)[:base_sampling_rate//10]
+
         for recording in self:
-            recording.sensor_frame = pd.DataFrame(resample(
+            sensor_frame_resampled = pd.DataFrame(signal.resample_poly(
                     x=recording.sensor_frame,
-                    num=int(target_sampling_rate * recording.sensor_frame.shape[0]),
+                    up=target_sampling_rate,
+                    down=base_sampling_rate
                 ))
-            recording.time_frame = pd.Series(resample(
-                    x=recording.time_frame,
-                    num=int(target_sampling_rate * recording.time_frame.shape[0]),
-                ))
+            time_frame_resampled = pd.Series(
+                list(
+                    map(lambda x: x * (base_sampling_rate / target_sampling_rate), recording.time_frame)
+                    )[:int(len(recording.time_frame)* (target_sampling_rate / base_sampling_rate))]
+                )
+            activities_resampled = pd.Series(
+                list(map(lambda y: recording.activities[y], (list(
+                    map(lambda x: int(x * (target_sampling_rate / base_sampling_rate)), recording.activities.index)
+                )[:int(len(recording.activities.index) * (target_sampling_rate / base_sampling_rate))])))
+            )
+
+            # make sure the length of the resampled data is equal
+            recording.sensor_frame = sensor_frame_resampled
+            recording.time_frame = time_frame_resampled
+            recording.activities = activities_resampled
+            min_length = min(len(recording.sensor_frame), len(recording.time_frame), len(recording.activities))
+            recording.sensor_frame = recording.sensor_frame.iloc[:min_length]
+            recording.time_frame = recording.time_frame.iloc[:min_length]
+            recording.activities = recording.activities.iloc[:min_length]
+
+        if show_plot == True:
+            x_new = np.linspace(0, 1, target_sampling_rate)
+            y_new = np.array(self[0].sensor_frame.iloc[:,0])[:target_sampling_rate]
+
+            x_time_new = np.linspace(0, 1, target_sampling_rate//10)
+            y_time_new = np.array(self[0].time_frame)[:target_sampling_rate//10]
+
+            x_activities_new = np.linspace(0, 1, target_sampling_rate//10)
+            y_activities_new = np.array(self[0].activities)[:target_sampling_rate//10]
+            plt.plot(x, y, 'g.-', x_new, y_new, 'r.-', 1)
+            plt.legend(['data', 'resampled'], loc='best')
+
+            if path != None:
+                plt.savefig(os.path.join(path, 'resampling.png'))
+            else:
+                plt.savefig('resampling.png')
+            plt.show()
+            plt.close()
+            plt.plot(x_activities, y_activities, 'g.-', x_activities_new, y_activities_new, 'r.-', 1)
+            plt.legend(['data', 'resampled'], loc='best')
+
+            if path != None:
+                plt.savefig(os.path.join(path, 'resampling_activities.png'))
+            else:
+                plt.savefig('resampling_activities.png')
+            plt.show()
+            plt.close()
+            plt.plot(x_time, y_time, 'g.-', x_time_new, y_time_new, 'r.-', 1)
+            plt.legend(['data', 'resampled'], loc='best')
+
+            if path != None:
+                plt.savefig(os.path.join(path, 'resampling_time.png'))
+            else:
+                plt.savefig('resampling_time.png')
+            plt.show()
+            plt.close()
