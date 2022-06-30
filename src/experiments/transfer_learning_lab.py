@@ -24,8 +24,11 @@ import tensorflow as tf
 import numpy as np
 import random
 import os
+import keras.backend as K
 
 # define helper functions
+
+
 def freezeNonDenseLayers(model: RainbowModel):
     # Set non dense layers to not trainable (freezing them)
     for layer in model.model.layers:
@@ -39,6 +42,7 @@ def map_predictions_to_indexes(y: np.ndarray) -> list:
     return list(map(lambda x: np.argmax(x), y))
 
 # Init
+
 
 data_config = SonarLabConfig(
     dataset_path="../../data/lab_data_filtered_without_null"
@@ -64,47 +68,51 @@ subs = recordings.get_people_in_recordings()
 
 # define models
 
+
 def resnet_model() -> ResNetModel:
     model = ResNetModel(window_size=window_size,
-    n_features=len(features),
-    n_outputs=n_classes,
-    n_epochs=20,
-    learning_rate=0.0001,
-    batch_size=32,
-    input_distribution_mean=data_config.mean,
-    input_distribution_variance=data_config.variance,
-    author="TobiUndFelix",
-    version="0.1",
-    description="ResNet Model for Sonar Lab Dataset",)
+                        n_features=len(features),
+                        n_outputs=n_classes,
+                        n_epochs=20,
+                        learning_rate=0.0001,
+                        batch_size=32,
+                        input_distribution_mean=data_config.mean,
+                        input_distribution_variance=data_config.variance,
+                        author="TobiUndFelix",
+                        version="0.1",
+                        description="ResNet Model for Sonar Lab Dataset",)
     return model
+
 
 def franz_deep_conv_lstm() -> FranzDeepConvLSTM:
     model = FranzDeepConvLSTM(window_size=window_size,
-    n_features=len(features),
-    n_outputs=n_classes,
-    n_epochs=20,
-    learning_rate=0.0001,
-    batch_size=32,
-    input_distribution_mean=data_config.mean,
-    input_distribution_variance=data_config.variance,
-    author="TobiUndFelix",
-    version="0.1",
-    description="Franz' cnn lstm Model for Sonar Lab Dataset",)
+                              n_features=len(features),
+                              n_outputs=n_classes,
+                              n_epochs=20,
+                              learning_rate=0.0001,
+                              batch_size=32,
+                              input_distribution_mean=data_config.mean,
+                              input_distribution_variance=data_config.variance,
+                              author="TobiUndFelix",
+                              version="0.1",
+                              description="Franz' cnn lstm Model for Sonar Lab Dataset",)
     return model
+
 
 def deep_conv_lstm() -> DeepConvLSTM:
     model = DeepConvLSTM(window_size=window_size,
-    n_features=len(features),
-    n_outputs=n_classes,
-    n_epochs=20,
-    learning_rate=0.0001,
-    batch_size=32,
-    input_distribution_mean=data_config.mean,
-    input_distribution_variance=data_config.variance,
-    author="TobiUndFelix",
-    version="0.1",
-    description="DeepConvLSTM Model for Sonar Lab Dataset",)
+                         n_features=len(features),
+                         n_outputs=n_classes,
+                         n_epochs=20,
+                         learning_rate=0.0001,
+                         batch_size=32,
+                         input_distribution_mean=data_config.mean,
+                         input_distribution_variance=data_config.variance,
+                         author="TobiUndFelix",
+                         version="0.1",
+                         description="DeepConvLSTM Model for Sonar Lab Dataset",)
     return model
+
 
 models = [
     resnet_model,
@@ -112,25 +120,41 @@ models = [
     deep_conv_lstm,
 ]
 
+
+def get_f1(y_true, y_pred):  # taken from old keras source code
+    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+    possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
+    predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
+    precision = true_positives / (predicted_positives + K.epsilon())
+    recall = true_positives / (possible_positives + K.epsilon())
+    f1_val = 2*(precision*recall)/(precision+recall+K.epsilon())
+    return f1_val
+
+
 # setup list for final boxplot
-model_performances = [[] for _ in range(2 * len(models))]
-print(f"Initialized boxplot list: {model_performances}...")
+model_accuracies = [[] for _ in range(2 * len(models))]
+model_f1Scores = [[] for _ in range(2 * len(models))]
+
+print(f"Initialized boxplot list: {model_accuracies}...")
 
 print("Starting experiment...")
 for model_idx, model in enumerate(models):
-        
+
     result_md = f"# Experiment on {model.__name__}\n\n"
 
-    experiment_model_folder_path = os.path.join(experiment_folder_path, model.__name__)
+    experiment_model_folder_path = os.path.join(
+        experiment_folder_path, model.__name__)
     os.makedirs(experiment_model_folder_path, exist_ok=True)
     for tl_sub in subs:
 
         # setup directory
-        experiment_model_tl_folder_path = os.path.join(experiment_model_folder_path, tl_sub)
+        experiment_model_tl_folder_path = os.path.join(
+            experiment_model_folder_path, tl_sub)
         os.makedirs(experiment_model_tl_folder_path, exist_ok=True)
 
         # split data
-        recordings_tl, recordings_train = recordings.split_by_subjects([tl_sub])
+        recordings_tl, recordings_train = recordings.split_by_subjects([
+                                                                       tl_sub])
         if len(recordings_tl) < 5:
             print(f"Skipping {tl_sub} because it has less than 5 recordings")
             continue
@@ -140,7 +164,8 @@ for model_idx, model in enumerate(models):
             result_md += f"## Split {idx + 1}\n\n"
             result_md += f"Training on {len(train_index)} recordings\n"
             # split data
-            recordings_tl_train, recordings_tl_test = recordings_tl.split_by_indexes(train_index, test_index)
+            recordings_tl_train, recordings_tl_test = recordings_tl.split_by_indexes(
+                train_index)
 
             # Windowize
             windows_train = recordings_train.windowize(window_size)
@@ -162,14 +187,15 @@ for model_idx, model in enumerate(models):
             # init model
             base_model = model()
             result_md += f"## Sub to transfer learn on: {tl_sub}\n\n"
-            result_md += f"###Evaluating base model\n\n"
+            result_md += f"### Evaluating base model\n\n"
             result_md += f"{base_model.model.summary()}\n\n"
             # train model
-            base_model.fit(X_train, y_train)   
+            base_model.fit(X_train, y_train)
             # evaluate model
             result_md += "Classification report:\n\n"
 
-            y_true, y_test_pred_base_model = y_tl_test, base_model.predict(X_tl_test)
+            y_true, y_test_pred_base_model = y_tl_test, base_model.predict(
+                X_tl_test)
             a = tf.keras.metrics.Accuracy()
             a.update_state(
                 map_predictions_to_indexes(y_true),
@@ -185,8 +211,8 @@ for model_idx, model in enumerate(models):
                 y_tl_test,
                 file_name=f"base_model_conf_matrix_fold_{idx}",
             )
-            model_performances[2 * model_idx].append(a.result().numpy())
-            
+            model_accuracies[2 * model_idx].append(a.result().numpy())
+            model_f1Scores[2 * model_idx].append(f)
 
             # create tl_model
             tl_model = base_model
@@ -204,7 +230,8 @@ for model_idx, model in enumerate(models):
             tl_model.fit(X_tl_train, y_tl_train)
 
             result_md += "Classification report:\n\n"
-            y_true, y_test_pred_tl_model = y_tl_test, tl_model.predict(X_tl_test)
+            y_true, y_test_pred_tl_model = y_tl_test, tl_model.predict(
+                X_tl_test)
 
             m_tl = tf.keras.metrics.Accuracy()
             m_tl.update_state(
@@ -215,8 +242,8 @@ for model_idx, model in enumerate(models):
             f = f1_m(y_true, y_test_pred_tl_model)
             result_md += f"Score on F1: {f.numpy()}\n"
 
-            model_performances[1 + 2 * model_idx].append(m_tl.result().numpy())
-        
+            model_accuracies[1 + 2 * model_idx].append(m_tl.result().numpy())
+            model_f1Scores[1 + 2 * model_idx].append(f)
             # create confusion matrix and text metrics for tl model
             create_conf_matrix(
                 experiment_model_tl_folder_path,
@@ -229,37 +256,51 @@ for model_idx, model in enumerate(models):
         f.write(result_md)
 
 # add results to boxplot
-print(f"Plotting model performances: {model_performances}")
-fig, ax = plt.subplots(figsize=(8,6), dpi=300)
-ax.boxplot(model_performances)
-ax.set_title(f"Comparison of model with and without transfer learning on sonar lab data-set.\n")
+print(f"Plotting model performances: {model_accuracies}")
+fig, ax = plt.subplots(figsize=(8, 6), dpi=300)
+ax.boxplot(model_accuracies)
+ax.set_title(
+    f"Comparison of model accuracy with and without transfer learning on sonar lab data-set\n")
 ax.set_xlabel('Models')
 ax.set_ylabel('Accuracy')
-ax.set_xticklabels(['ResNet', 'ResNet-TL', 'CNNLSTM', 'CNNLSTM-TL', 'DeepConv-\nLSTM', 'DeepConv-\nLSTM-TL'])
-plt.savefig(os.path.join(experiment_folder_path, 'model_performances.png'))
+ax.set_xticklabels(['ResNet', 'ResNet-TL', 'CNNLSTM',
+                   'CNNLSTM-TL', 'DeepConv-\nLSTM', 'DeepConv-\nLSTM-TL'])
+plt.savefig(os.path.join(experiment_folder_path, 'model_accuracies.png'))
+
+plt.clf()
+fig, ax = plt.subplots(figsize=(8, 6), dpi=300)
+ax.boxplot(model_f1Scores)
+ax.set_title(
+    f"Comparison of model f1-scores with and without transfer learning on sonar lab data-set\n")
+ax.set_xlabel('Models')
+ax.set_ylabel('F1-Score')
+ax.set_xticklabels(['ResNet', 'ResNet-TL', 'CNNLSTM',
+                   'CNNLSTM-TL', 'DeepConv-\nLSTM', 'DeepConv-\nLSTM-TL'])
+plt.savefig(os.path.join(experiment_folder_path, 'model_f1Scores.png'))
 plt.show()
 plt.close()
 
 # calculate improvement of tl model
-diff_resnet_tl = np.mean(model_performances[0]) - np.mean(model_performances[1])
-diff_cnnlstm_tl = np.mean(model_performances[2]) - np.mean(model_performances[3])
-diff_deepconvlstm_tl = np.mean(model_performances[4]) - np.mean(model_performances[5])
+diff_resnet_tl = np.mean(model_accuracies[0]) - np.mean(model_accuracies[1])
+diff_cnnlstm_tl = np.mean(model_accuracies[2]) - np.mean(model_accuracies[3])
+diff_deepconvlstm_tl = np.mean(
+    model_accuracies[4]) - np.mean(model_accuracies[5])
 avg_improvement = (diff_resnet_tl + diff_cnnlstm_tl + diff_deepconvlstm_tl) / 3
 
 # save results to file
-model_performances_file_path = os.path.join(experiment_folder_path, "model_performances.txt")
+model_performances_file_path = os.path.join(
+    experiment_folder_path, "model_performances.txt")
 with open(model_performances_file_path, "w") as f:
     f.write(f"\n\nModel performances:\n")
-    f.write(f"ResNet: {model_performances[0]}\n")
-    f.write(f"ResNet-TL: {model_performances[1]}\n")
-    f.write(f"CNNLSTM: {model_performances[2]}\n")
-    f.write(f"CNNLSTM-TL: {model_performances[3]}\n")
-    f.write(f"DeepConvLSTM: {model_performances[4]}\n")
-    f.write(f"DeepConvLSTM-TL: {model_performances[5]}\n")
+    f.write(f"ResNet: {model_accuracies[0]}\n")
+    f.write(f"ResNet-TL: {model_accuracies[1]}\n")
+    f.write(f"CNNLSTM: {model_accuracies[2]}\n")
+    f.write(f"CNNLSTM-TL: {model_accuracies[3]}\n")
+    f.write(f"DeepConvLSTM: {model_accuracies[4]}\n")
+    f.write(f"DeepConvLSTM-TL: {model_accuracies[5]}\n")
     f.write(f"\n\nImprovement of tl model:\n")
     f.write(f"ResNet-TL: {diff_resnet_tl}\n")
     f.write(f"CNNLSTM-TL: {diff_cnnlstm_tl}\n")
     f.write(f"DeepConvLSTM-TL: {diff_deepconvlstm_tl}\n")
     f.write(f"\n\)")
     f.write(f"\n\nAverage improvement of tl model: {avg_improvement}")
-
