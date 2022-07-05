@@ -52,11 +52,11 @@ class DataConfig:
         recordings = self._load_dataset(**kwargs)
         variance, mean = self._loadDataSetMeasures()
         # Plot replacement of nan
-        plotted_nan = False
+        plotted_nan = True
         for recording in recordings:
             if features != None:
                 recording.sensor_frame = recording.sensor_frame[features]
-            print(f"Replacing NaNs...")
+
             if recording.sensor_frame.isnull().values.any() and not plotted_nan:
                 # Get first column with nan
                 self._replace_and_plot_nan(recording.sensor_frame)
@@ -175,11 +175,12 @@ class DataConfig:
         return {}
 
     def _getDataConfigIdentifier(self):
-        return type(self).__name__ + self.dataset_path + ", ".join(self.features) if self.features != None else ""
+        return type(self).__name__ + self.dataset_path + (", ".join(self.features) if hasattr(self, "features") else "")
 
-    def _replace_and_plot_nan(self, df : pd.DataFrame):
+    def _replace_and_plot_nan(self, df: pd.DataFrame):
         first_nan_col = df.loc[:, df.isna().any()].columns[0]
-        nan_index = df.loc[:,first_nan_col].loc[df.loc[:,first_nan_col].isna()].index[0]
+        nan_index = df.loc[:, first_nan_col].loc[df.loc[:,
+                                                        first_nan_col].isna()].index[0]
         slice = self._get_nan_col_slice(df, first_nan_col, nan_index)
         x = np.linspace(0, slice.size - 1, slice.size)
         y = np.array(slice)
@@ -192,5 +193,6 @@ class DataConfig:
         plt.plot(x, y_new, 'r.-')
         plt.savefig('after.png')
         plt.show()
+
     def _get_nan_col_slice(self, df: pd.DataFrame, first_nan_col, nan_index: int):
-         return df.loc[:,first_nan_col].iloc[nan_index-50:nan_index+50]
+        return df.loc[:, first_nan_col].iloc[nan_index-50:nan_index+50]

@@ -16,7 +16,6 @@ from utils.folder_operations import new_saved_experiment_folder
 from sklearn.utils import shuffle
 import os
 # {'orhan': 20, 'alex': 1, 'daniel': 4, 'lucas': 3, 'marco': 1, 'felix': 5, 'valentin': 6, 'franz': 4, 'kirill': 5, 'tobi': 2}
-person_to_leave_out = "kirill"
 
 # Init
 # OpportunityConfig(dataset_path='../../data/opportunity-dataset')
@@ -32,19 +31,19 @@ window_size = 900  # 30 * 3
 n_classes = data_config.n_activities()
 
 experiment_folder_path = new_saved_experiment_folder(
-    f"export_resnet_exp_{person_to_leave_out}_left_out")
+    f"export_resnet_exp_leave_rec_out")
 
 # Load data
-recordings_test, recordings_train = data_config.load_dataset(
-    features=features).split_by_subjects([person_to_leave_out])
+recordings = data_config.load_dataset(
+    features=features)
 
 
 random.seed(1678978086101)
 # random.shuffle(recordings)
 
 # Test Train Split
-# recordings_train, recordings_test = recordings.split_by_percentage(
-#    test_percentage=0.2)
+recordings_train, recordings_test = recordings.split_by_percentage(
+    test_percentage=0.2)
 # Windowize
 windows_train = recordings_train.windowize(window_size)
 windows_test = recordings_test.windowize(window_size)
@@ -69,8 +68,8 @@ model = ResNetModel(
     input_distribution_variance=data_config.variance,
     author="TobiUndFelix",
     version="0.1",
-    description=f"ResNet Model for Sonar22 Dataset. Trained on sonar lab data leaving subject {person_to_leave_out} out.",
-    name=f"model_excluding_{person_to_leave_out}"
+    description=f"ResNet Model for Sonar22 Dataset. Trained on sonar lab data ",
+    name=f"model"
 )
 
 print("MEan", data_config.mean)
