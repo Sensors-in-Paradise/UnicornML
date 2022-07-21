@@ -51,13 +51,12 @@ class DataConfig:
 
         recordings = self._load_dataset(**kwargs)
         variance, mean = self._loadDataSetMeasures()
-        # Plot replacement of nan
-        plotted_nan = True
+        
         for recording in recordings:
             if features != None:
                 recording.sensor_frame = recording.sensor_frame[features]
 
-            if recording.sensor_frame.isnull().values.any() and not plotted_nan:
+            if recording.sensor_frame.isnull().values.any():
                 # Get first column with nan
                 self._replace_and_plot_nan(recording.sensor_frame)
             else:
