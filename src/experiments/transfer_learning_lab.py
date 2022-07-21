@@ -16,7 +16,6 @@ from models.FranzDeepConvLSTM import FranzDeepConvLSTM
 from utils.data_set import DataSet
 from utils.folder_operations import new_saved_experiment_folder
 from sklearn.utils import shuffle
-from tensorflow.keras.layers import Dense
 from utils.metrics import f1_m
 from utils.grid_search_cv import GridSearchCV
 from sklearn.metrics import classification_report
@@ -27,12 +26,6 @@ import os
 import keras.backend as K
 
 # define helper functions
-
-
-def freezeNonDenseLayers(model: RainbowModel):
-    # Set non dense layers to not trainable (freezing them)
-    for layer in model.model.layers:
-        layer.trainable = type(layer) == Dense
 
 
 def map_predictions_to_indexes(y: np.ndarray) -> list:
@@ -58,6 +51,11 @@ experiment_folder_path = new_saved_experiment_folder("transfer_learning_lab")
 
 # Load data
 recordings = data_config.load_dataset(features=features)
+
+print(recordings.count_activities_per_subject())
+recordings.plot_activities_per_subject(experiment_folder_path, "sonarLab_activitiesPerSubject.png",
+                                       "Measurement time stamps per activity for each subject in SONAR lab data set")
+
 
 random.seed(1678978086101)
 random.shuffle(recordings)
@@ -220,7 +218,7 @@ for model_idx, model in enumerate(models):
             tl_model.model_name += "_tl" + tl_sub
 
             # freeze inner layers of tl model
-            freezeNonDenseLayers(tl_model)
+            tl_model.freezeNonDenseLayers()
 
             result_md += f"###Evaluating tl model\n\n"
             result_md += f"{tl_model.model.summary()}\n\n"

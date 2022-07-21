@@ -77,11 +77,19 @@ class DataSet(list):
         return DataSet(a, self.data_config), DataSet(b, self.data_config)
 
     def count_activities_per_subject(self) -> "pd.DataFrame":
+        def activity_counts_from_rec(rec): return rec.activities.copy().map(
+            lambda x: self.data_config.activity_idx_to_display_name(x))
+
+        def subject_to_id(
+            subject_label): return f"Subject {self.data_config.raw_subject_to_subject_idx(subject_label)}"
+
         values = pd.DataFrame(
-            {self[0].subject: self[0].activities.value_counts()})
+            {subject_to_id(self[0].subject): activity_counts_from_rec(self[0]).value_counts()})
         for rec in self[1:]:
+            # print(rec.activities.value_counts())
+
             values = values.add(pd.DataFrame(
-                {rec.subject: rec.activities.value_counts()}), fill_value=0)
+                {subject_to_id(rec.subject): activity_counts_from_rec(rec).value_counts()}), fill_value=0)
         return values
 
     def count_activities_per_subject_as_dict(self) -> "dict[str, int]":
@@ -115,10 +123,17 @@ class DataSet(list):
 
     def plot_activities_per_subject(self, dirPath, fileName: str, title: str = ""):
         values = self.count_activities_per_subject()
-        values.plot.bar(figsize=(22, 16))
-        plt.title(title)
-        plt.xlabel("x")
-        plt.ylabel("y")
+
+        plt.figure()
+        plt.rcParams.update({'font.size': 16})
+
+        ax = values.plot.bar(figsize=(22, 25), linewidth=4, fontsize=18)
+
+        plt.title(title, fontdict={'fontsize': 35})
+        plt.legend(fontsize=20)
+        plt.xlabel("Activities (Subjects)", fontsize=22)
+        plt.ylabel("Measurement timestamps", fontsize=22)
+
         plt.savefig(os.path.join(dirPath, fileName))
 
     def split_by_percentage(self, test_percentage: float, intra: Boolean = False) -> "tuple[DataSet, DataSet]":

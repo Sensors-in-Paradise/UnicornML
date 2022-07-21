@@ -85,6 +85,9 @@ class DataConfig:
         ds.replaceNaN_ffill()
         return ds
 
+    def getLabels(self) -> list[str]:
+        return list(self.raw_label_to_activity_idx_map.keys())
+
     # interface (subclass responsibility to define) ------------------------------------------------------------
     def _load_dataset(self, **kwargs) -> "list[Recording]":
         raise NotImplementedError(
@@ -120,6 +123,16 @@ class DataConfig:
             self.activity_idx_to_activity_name_map is not None
         ), "A subclass of Config which initializes the var activity_idx_to_activity_name_map should be used to access activity mapping."
         assert_type((activity_idx, int))
+        return self.activity_idx_to_activity_name_map[activity_idx]
+
+    def activity_idx_to_display_name(self, activity_idx: int) -> str:
+        assert (
+            self.activity_idx_to_activity_name_map is not None
+        ), "A subclass of Config which initializes the var activity_idx_to_activity_name_map should be used to access activity mapping."
+        assert_type((activity_idx, int))
+        if hasattr(self, "activity_idx_to_display_name"):
+            return self.activity_idx_to_display_name_map[activity_idx]
+
         return self.activity_idx_to_activity_name_map[activity_idx]
 
     def n_activities(self) -> int:

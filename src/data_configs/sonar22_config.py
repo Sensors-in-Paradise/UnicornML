@@ -20,3 +20,5 @@ class Sonar22CategoriesConfig(DataConfig):
 
     category_labels = {'rollstuhl transfer': 0, 'essen reichen': 1, 'umkleiden': 2, 'bad vorbereiten': 3, 'bett machen': 4, 'gesamtwaschen im bett': 5, 'aufräumen': 6, 'geschirr einsammeln': 7, 'essen austragen': 8, 'getränke ausschenken': 9, 'küchenvorbereitung': 10,
                        'waschen am waschbecken': 11, 'rollstuhl schieben': 12, 'mundpflege': 13, 'haare kämmen': 14, 'essen auf teller geben': 15, 'dokumentation': 16, 'aufwischen (staub)': 17, 'haare waschen': 18, 'medikamente stellen': 19, 'accessoires anlegen': 20, 'föhnen': 21}
+
+    
