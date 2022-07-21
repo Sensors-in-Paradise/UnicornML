@@ -6,9 +6,11 @@ import tensorflow.keras as keras
 from utils.Window import Window
 from utils.Recording import Recording
 
-class GaitAnalysisTLModel(RainbowModel):
+
+class GaitAnalysisOGModel(RainbowModel):
     def __init__(self, **kwargs):
         """
+
         epochs=10
         :param kwargs:
             window_size: int
@@ -31,14 +33,18 @@ class GaitAnalysisTLModel(RainbowModel):
         )
 
     def _create_model(self):
+        self.inner_model = tf.keras.Sequential(
+            [tf.keras.layers.Conv1D(filters=32, kernel_size=3, activation="relu")]
+        )
+        outer_model = tf.keras.Sequential(
+            [
+                tf.keras.layers.GlobalMaxPooling1D(),
+                tf.keras.layers.Dropout(0.2),
+            ]
+        )
         inputs = tf.keras.Input(shape=(self.window_size, self.n_features))
-        x = tf.keras.layers.Conv1D(filters=32, kernel_size=3, activation="relu")(inputs)
-        x = tf.keras.layers.MaxPooling1D(pool_size=2)(x)
-        x = tf.keras.layers.Conv1D(filters=64, kernel_size=3, activation="relu")(x)
-        x = tf.keras.layers.MaxPooling1D(pool_size=2)(x)
-        x = tf.keras.layers.Dense(units=64, activation="relu")(x)
-        x= tf.keras.layers.GlobalMaxPooling1D()(x)
-        x =   tf.keras.layers.Dropout(0.2)(x)
+        x = self.inner_model(inputs)
+        x = outer_model(x)
         outputs = tf.keras.layers.Dense(units=self.n_outputs, activation="softmax")(x)
         model = tf.keras.Model(inputs=inputs, outputs=outputs)
         model.compile(
@@ -46,8 +52,9 @@ class GaitAnalysisTLModel(RainbowModel):
             optimizer=tf.keras.optimizers.Adam(
                 learning_rate=0.001
             ),  # "binary_crossentropy"
-            metrics='accuracy',
+            metrics=self.metrics,
         )  # , precision, recall gives an error with the combined versions of keras-metrics, keras, and tf
+
         return model
 
     def _windowize_recording(self, recording: "Recording") -> "list[Window]":

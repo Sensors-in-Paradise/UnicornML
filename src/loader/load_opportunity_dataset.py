@@ -9,7 +9,7 @@ from utils.Recording import Recording
 import utils.settings as settings
 
 
-def load_opportunity_dataset(opportunity_dataset_path: str) ->  "list[Recording]":
+def load_opportunity_dataset(opportunity_dataset_path: str) -> "list[Recording]":
     """
     Returns a list of Recordings from the opportunity dataset
     """
@@ -97,7 +97,7 @@ def load_opportunity_dataset(opportunity_dataset_path: str) ->  "list[Recording]
                 lambda label: settings.DATA_CONFIG.original_idx_to_activity_idx_map[label]
 
             ),  # Use `[0]` to get only one activity | maps 0, 101, 102, 103, 104, 105 to 0, 1, 2, 3, 4, 5
-            subject=int(sub),
+            subject=str(sub),
             recording_index=int(rec)
         ))
 
