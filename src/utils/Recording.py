@@ -1,4 +1,3 @@
-from psutil import sensors_fans
 from utils.typing import assert_type
 
 import pandas as pd

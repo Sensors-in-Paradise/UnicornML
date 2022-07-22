@@ -51,17 +51,13 @@ class DataConfig:
 
         recordings = self._load_dataset(**kwargs)
         variance, mean = self._loadDataSetMeasures()
-        
+
         for recording in recordings:
             if features != None:
                 recording.sensor_frame = recording.sensor_frame[features]
 
-            if recording.sensor_frame.isnull().values.any():
-                # Get first column with nan
-                self._replace_and_plot_nan(recording.sensor_frame)
-            else:
-                recording.sensor_frame = recording.sensor_frame.fillna(
-                    method="ffill").fillna(method="bfill")
+            recording.sensor_frame = recording.sensor_frame.fillna(
+                method="ffill").fillna(method="bfill")
         if variance is None or mean is None:
             print(
                 "Calculating mean and variance of whole dataset once. This can take a while...")
@@ -84,7 +80,7 @@ class DataConfig:
         ds.replaceNaN_ffill()
         return ds
 
-    def getLabels(self) -> list[str]:
+    def getLabels(self) -> "list[str]":
         return list(self.raw_label_to_activity_idx_map.keys())
 
     # interface (subclass responsibility to define) ------------------------------------------------------------
